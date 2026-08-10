@@ -2,8 +2,11 @@
 
 import { Dithering } from "@paper-design/shaders-react";
 import { ArrowRight, Eye, EyeOff } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import styles from "./auth.module.css";
 
 type AuthMode = "login" | "signup";
@@ -18,25 +21,79 @@ function BrandMark() {
   );
 }
 
-function GoogleMark() {
-  return <span className={styles.googleMark} aria-hidden="true">G</span>;
-}
-
 export default function AuthPage() {
+  const router = useRouter();
   const [mode, setMode] = useState<AuthMode>("login");
   const [showPassword, setShowPassword] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
+  const [pending, setPending] = useState(false);
+  const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
 
   useEffect(() => {
     const media = window.matchMedia("(prefers-reduced-motion: reduce)");
     const update = () => setReducedMotion(media.matches);
     update();
+    const callbackError = new URLSearchParams(window.location.search).get("error");
+    if (callbackError) {
+      queueMicrotask(() => setMessage({ type: "error", text: callbackError }));
+    }
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
   }, []);
 
-  function submit(event: FormEvent<HTMLFormElement>) {
+  async function continueWithGoogle() {
+    setPending(true);
+    setMessage(null);
+    const supabase = createClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo: `${siteUrl}/auth/callback?next=/markets` },
+    });
+
+    if (error) {
+      setMessage({ type: "error", text: error.message });
+      setPending(false);
+    }
+  }
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    setPending(true);
+    setMessage(null);
+
+    const form = new FormData(event.currentTarget);
+    const email = String(form.get("email") ?? "").trim();
+    const password = String(form.get("password") ?? "");
+    const fullName = String(form.get("name") ?? "").trim();
+    const supabase = createClient();
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+
+    const result = mode === "login"
+      ? await supabase.auth.signInWithPassword({ email, password })
+      : await supabase.auth.signUp({
+          email,
+          password,
+          options: {
+            data: { full_name: fullName },
+            emailRedirectTo: `${siteUrl}/auth/callback?next=/markets`,
+          },
+        });
+
+    if (result.error) {
+      setMessage({ type: "error", text: result.error.message });
+      setPending(false);
+      return;
+    }
+
+    if (mode === "signup" && !result.data.session) {
+      setMessage({ type: "success", text: "Check your school email to confirm your account." });
+      setPending(false);
+      return;
+    }
+
+    router.push("/markets");
+    router.refresh();
   }
 
   return (
@@ -79,9 +136,9 @@ export default function AuthPage() {
               </p>
             </div>
 
-            <button type="button" className={styles.googleButton}>
-              <GoogleMark />
-              Continue with Google
+            <button type="button" className={styles.googleButton} onClick={continueWithGoogle} disabled={pending}>
+              <Image src="/google-g.svg" alt="" width={18} height={18} aria-hidden="true" />
+              {pending ? "Signing in…" : "Sign in with Google"}
             </button>
 
             <div className={styles.divider}><span>or use your school email</span></div>
@@ -128,8 +185,14 @@ export default function AuthPage() {
                 {mode === "login" && <button type="button" className={styles.textButton}>Forgot password?</button>}
               </div>
 
-              <button type="submit" className={styles.submitButton}>
-                {mode === "login" ? "Log in" : "Create account"}
+              {message && (
+                <p className={message.type === "error" ? styles.formError : styles.formSuccess} role="status">
+                  {message.text}
+                </p>
+              )}
+
+              <button type="submit" className={styles.submitButton} disabled={pending}>
+                {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
                 <ArrowRight size={17} />
               </button>
             </form>

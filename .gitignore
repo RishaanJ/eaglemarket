@@ -30,8 +30,44 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
-.env*
+# environment variables and local overrides
+.env
+.env.*
+!.env.example
+!.env.*.example
+
+# OAuth, cloud-provider, and service-account credentials
+client_secret_*.json
+credentials*.json
+service-account*.json
+service_account*.json
+google-credentials*.json
+firebase-adminsdk-*.json
+*.credentials.json
+
+# private keys, certificates, and keystores
+*.key
+*.p8
+*.p12
+*.pfx
+*.jks
+*.keystore
+*.mobileprovision
+
+# package-manager and deployment auth
+.npmrc
+.yarnrc.yml.local
+.netrc
+
+# local Supabase state and secrets
+/supabase/.temp/
+/supabase/.branches/
+/supabase/.env*
+!/supabase/.env.example
+
+# local MCP configuration may contain access tokens
+.mcp.local.json
+.mcp.json.local
 
 # vercel
 .vercel

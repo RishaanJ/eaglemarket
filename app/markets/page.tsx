@@ -20,9 +20,12 @@ import {
   Mic2,
   Search,
   Trophy,
+  type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { createClient } from "@/lib/supabase/client";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { calculateProbability, createInitialPool, executeTrade, type MarketPool } from "@/lib/amm";
@@ -30,7 +33,7 @@ import { useHeroMarket } from "@/lib/use-market";
 
 interface ListMarket {
   id: string;
-  icon: any;
+  icon: LucideIcon;
   category: string;
   title: string;
   volume: string;
@@ -176,6 +179,7 @@ function MarketCard({
 }
 
 export default function Home() {
+  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("Trending");
   const [orderSide, setOrderSide] = useState<"yes" | "no">("yes");
@@ -202,6 +206,13 @@ export default function Home() {
   const handleHeroTrade = () => {
     if (numericAmount <= 0) return;
     trade({ investmentAmount: numericAmount, isBuyingYes: orderSide === "yes" });
+  };
+
+  const signOut = async () => {
+    const supabase = createClient();
+    await supabase.auth.signOut();
+    router.push("/");
+    router.refresh();
   };
 
   const handleGridMarketTrade = (id: string, isBuyingYes: boolean) => {
@@ -262,7 +273,7 @@ export default function Home() {
           <button className="token-balance">
             <EagCoin size="sm" /> {userBalance.toLocaleString()} EAG
           </button>
-          <button className="signup">Profile</button>
+          <button className="signup" onClick={signOut}>Log out</button>
         </div>
         <button
           className="mobile-menu"
@@ -278,7 +289,7 @@ export default function Home() {
           <a href="#markets">Markets</a>
           <a href="#live">Live</a>
           <a href="#portfolio">My picks</a>
-          <button>Profile</button>
+          <button onClick={signOut}>Log out</button>
         </nav>
       )}
 

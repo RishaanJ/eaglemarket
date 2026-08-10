@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import type { LucideIcon } from "lucide-react";
 import {
   calculateProbability,
   calculatePurchaseOutput,
@@ -14,7 +15,7 @@ import {
 } from "./amm";
 
 export interface MarketItem extends MarketState {
-  icon: any;
+  icon: LucideIcon;
   color: string;
   closes: string;
   move: string;
