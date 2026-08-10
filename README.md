@@ -1,4 +1,4 @@
-# EagleMarket
+![logo](https://i.imgur.com/wM8Vdu8.png)
 
 EagleMarket is a school prediction-market interface for questions students are already discussing: test averages, game results, SPW outcomes, club events, and other campus moments.
 
