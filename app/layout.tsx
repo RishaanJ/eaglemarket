@@ -18,11 +18,11 @@ const robotoCondensed = Roboto_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "EagleMarket — Trade what happens next",
+  title: "EagleMarket - Trade what happens next",
   description: "A simple prediction market for the questions shaping tomorrow.",
 };
 
-export default function RootLayout({ children }: LayoutProps<"/">) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html
       lang="en"
