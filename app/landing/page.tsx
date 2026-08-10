@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowLeft, ArrowRight, CalendarDays, Check, ChevronRight, FlaskConical, Trophy } from "lucide-react";
+import { ArrowRight, CalendarDays, Check, ChevronRight, FlaskConical, Trophy } from "lucide-react";
 import Link from "next/link";
 import { BentoGrid } from "@/components/ui/bento-grid";
 import { LineShadowText } from "@/components/ui/line-shadow-text"
@@ -32,7 +32,7 @@ export default function LandingPage() {
         <h1>The market for <LineShadowText className="italic">everything</LineShadowText> AHS.</h1>
         <p>Make predictions on tests, games, SPW, and the things everyone is already talking about. No money—just EAG and bragging rights.</p>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryCta} href="/">Browse markets <ArrowRight size={16} /></Link>
+          <Link className={styles.primaryCta} href="/">Claim your free EAG <ArrowRight size={16} /></Link>
           <a className={styles.secondaryCta} href="#how">How it works</a>
         </div>
         <div className={styles.trust}><span><Check size={13} /> Free to play</span><span><Check size={13} /> School only</span><span><Check size={13} /> No cash value</span></div>
