@@ -117,7 +117,7 @@ export default function PicksClient({
         ? positions.filter((position) => position.status === "open")
         : filter === "resolved"
           ? positions.filter((position) =>
-              ["resolved", "cancelled"].includes(position.status),
+              ["closed", "resolved", "cancelled"].includes(position.status),
             )
           : positions;
     return filtered.filter((position) =>
@@ -143,7 +143,7 @@ export default function PicksClient({
   return (
     <div className="app-shell picks-shell">
       <header className="topbar picks-topbar">
-        <Link className="wordmark" href="/">
+        <Link className="wordmark" href="/markets">
           <EagleMark />
           <span>EagleMarket</span>
         </Link>
@@ -245,7 +245,14 @@ export default function PicksClient({
                         aria-pressed={selectedPosition?.marketId === position.marketId}
                       >
                         <div className="featured-card-top">
-                          <span className="category-label">{position.category}</span>
+                          <div className="featured-card-meta">
+                            <span className="category-label">{position.category}</span>
+                            {position.status !== "open" && (
+                              <span className="position-status-badge">
+                                {position.status === "cancelled" ? "Cancelled" : "Closed"}
+                              </span>
+                            )}
+                          </div>
                           <ArrowRight size={15} />
                         </div>
                         <h3>{position.question}</h3>
@@ -306,8 +313,16 @@ export default function PicksClient({
             <div className="active-position-main">
               <div className="active-position-copy">
                 <div className="active-position-meta">
-                  <span style={{ background: selectedPosition.categoryColor }} />
+                  <span
+                    className="active-position-category-dot"
+                    style={{ background: selectedPosition.categoryColor }}
+                  />
                   {selectedPosition.category}
+                  {selectedPosition.status !== "open" && (
+                    <span className="position-status-badge">
+                      {selectedPosition.status === "cancelled" ? "Cancelled" : "Closed"}
+                    </span>
+                  )}
                 </div>
                 <h2>{selectedPosition.question}</h2>
                 <p>{selectedPosition.status === "open" ? `Closes ${new Date(selectedPosition.closesAt).toLocaleDateString()}` : `Resolved ${selectedPosition.resolvedOutcome?.toUpperCase() ?? "—"}`}</p>

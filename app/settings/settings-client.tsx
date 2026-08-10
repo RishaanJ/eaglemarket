@@ -8,6 +8,11 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { EagCoin } from "@/components/ui/eag-coin";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
+import {
+  getUsernameFormatError,
+  normalizeUsername,
+  USERNAME_MAX_LENGTH,
+} from "@/lib/usernames";
 
 function EagleMark() {
   return (
@@ -58,12 +63,13 @@ export default function SettingsClient({
 
   const saveProfile = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const cleanName = displayName.trim();
+    const cleanName = normalizeUsername(displayName);
     const year = graduationYear ? Number(graduationYear) : null;
 
-    if (!cleanName || cleanName.length > 80) {
+    const usernameError = getUsernameFormatError(cleanName);
+    if (usernameError) {
       setSaveState("error");
-      setMessage("Display name must be between 1 and 80 characters.");
+      setMessage(usernameError);
       return;
     }
 
@@ -83,7 +89,15 @@ export default function SettingsClient({
 
     if (error) {
       setSaveState("error");
-      setMessage("Your profile couldn’t be saved. Please try again.");
+      if (error.code === "23505") {
+        setMessage("That username is already taken. Try another one.");
+      } else if (error.message.includes("USERNAME_NOT_ALLOWED")) {
+        setMessage("That username isn’t allowed. Choose another one.");
+      } else if (error.message.includes("USERNAME_INVALID_FORMAT")) {
+        setMessage("That username doesn’t match the required format.");
+      } else {
+        setMessage("Your profile couldn’t be saved. Please try again.");
+      }
       return;
     }
 
@@ -175,19 +189,21 @@ export default function SettingsClient({
             <Card className="settings-card">
             <CardHeader className="border-b">
               <CardTitle>Profile</CardTitle>
-              <CardDescription>This information appears on rankings and your public activity.</CardDescription>
+              <CardDescription>Your username appears on rankings and your public activity.</CardDescription>
             </CardHeader>
             <CardContent className="settings-fields">
               <label>
-                <span>Display name</span>
+                <span>Username</span>
                 <div className="settings-input-wrap">
                   <input
                     value={displayName}
                     onChange={(event) => { setDisplayName(event.target.value); setSaveState("idle"); }}
-                    maxLength={80}
-                    autoComplete="name"
+                    maxLength={USERNAME_MAX_LENGTH}
+                    autoComplete="username"
+                    aria-describedby="username-hint"
                   />
                 </div>
+                <small id="username-hint">3–30 characters. Letters, numbers, spaces, periods, underscores, and hyphens.</small>
               </label>
               <label>
                 <span>Graduation year</span>
@@ -211,7 +227,10 @@ export default function SettingsClient({
               </label>
             </CardContent>
             <CardFooter className="settings-form-footer border-t">
-              <span className={saveState === "error" ? "settings-message error" : "settings-message"} role="status">
+              <span
+                className={saveState === "error" ? "settings-message error" : "settings-message"}
+                role={saveState === "error" ? "alert" : "status"}
+              >
                 {saveState === "saved" && <Check size={14} />}{message}
               </span>
               <button type="submit" disabled={saveState === "saving"}>

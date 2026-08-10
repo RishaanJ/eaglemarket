@@ -97,8 +97,7 @@ export default function AuthPage() {
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("name") ?? "").trim();
     const supabase = createClient();
-    const callbackUrl = new URL("/auth/callback", window.location.origin);
-    callbackUrl.searchParams.set("next", "/markets");
+    const confirmationUrl = new URL("/auth/confirm", window.location.origin);
 
     const result = mode === "login"
       ? await supabase.auth.signInWithPassword({
@@ -111,7 +110,7 @@ export default function AuthPage() {
           password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: callbackUrl.toString(),
+            emailRedirectTo: confirmationUrl.toString(),
             captchaToken,
           },
         });
@@ -126,8 +125,7 @@ export default function AuthPage() {
     }
 
     if (mode === "signup" && !result.data.session) {
-      setMessage({ type: "success", text: "Check your school email to confirm your account." });
-      setPending(false);
+      router.replace("/auth/check-email");
       return;
     }
 
