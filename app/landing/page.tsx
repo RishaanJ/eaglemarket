@@ -22,9 +22,9 @@ export default function LandingPage() {
   return (
     <main className={styles.page}>
       <nav className={styles.nav} aria-label="Landing navigation">
-        <Link className={styles.brand} href="/landing"><span className={styles.wing}><i /><i /><i /></span>EagleMarket</Link>
-        <div className={styles.navLinks}><a href="#markets">Markets</a><a href="#how">How it works</a></div>
-        <Link className={styles.openApp} href="/">Open app <ArrowRight size={15} /></Link>
+        <Link className={styles.brand} href="/"><span className={styles.wing}><i /><i /><i /></span>EagleMarket</Link>
+        <div className={styles.navLinks}><a href="#markets">Markets</a><a href="#how">How it works</a><Link href="/auth">Log in</Link></div>
+        <Link className={styles.openApp} href="/markets">Open app <ArrowRight size={15} /></Link>
       </nav>
 
       <section className={styles.hero}>
@@ -32,7 +32,7 @@ export default function LandingPage() {
         <h1>The market for <LineShadowText className="italic">everything</LineShadowText> AHS.</h1>
         <p>Make predictions on tests, games, SPW, and the things everyone is already talking about. No money—just EAG and bragging rights.</p>
         <div className={styles.heroActions}>
-          <Link className={styles.primaryCta} href="/">Claim your free EAG <ArrowRight size={16} /></Link>
+          <Link className={styles.primaryCta} href="/markets">Claim your free EAG <ArrowRight size={16} /></Link>
           <a className={styles.secondaryCta} href="#how">How it works</a>
         </div>
         <div className={styles.trust}><span><Check size={13} /> Free to play</span><span><Check size={13} /> School only</span><span><Check size={13} /> No cash value</span></div>
@@ -67,9 +67,9 @@ export default function LandingPage() {
       <div className={styles.topicRail} aria-label="Market topics"><Marquee repeat={4} className={styles.topicMarquee}>{topics.map(topic => <span key={topic}>{topic}<i /></span>)}</Marquee></div>
 
       <section className={styles.section} id="markets">
-        <div className={styles.sectionHeading}><div><span>LIVE MARKETS</span><h2>What AHS is predicting</h2></div><Link href="/">View all <ArrowRight size={15} /></Link></div>
+        <div className={styles.sectionHeading}><div><span>LIVE MARKETS</span><h2>What AHS is predicting</h2></div><Link href="/markets">View all <ArrowRight size={15} /></Link></div>
         <BentoGrid className={styles.marketGrid}>
-          {markets.map(market => <DitherCardFrame className={styles.landingDither} icon={market.icon} color={market.color} key={market.question}><Link href="/" className={styles.marketCard}><div className={styles.cardTop}><span>{market.category}</span><ChevronRight size={16} /></div><h3>{market.question}</h3><div className={styles.cardChance}><strong>{market.chance}%</strong><span>chance</span></div><div className={styles.miniBar}><i style={{ width: `${market.chance}%`, background: market.color }} /></div><div className={styles.cardBottom}><span>{market.volume}</span><span>Closes {market.close}</span></div></Link></DitherCardFrame>)}
+          {markets.map(market => <DitherCardFrame className={styles.landingDither} icon={market.icon} color={market.color} key={market.question}><Link href="/markets" className={styles.marketCard}><div className={styles.cardTop}><span>{market.category}</span><ChevronRight size={16} /></div><h3>{market.question}</h3><div className={styles.cardChance}><strong>{market.chance}%</strong><span>chance</span></div><div className={styles.miniBar}><i style={{ width: `${market.chance}%`, background: market.color }} /></div><div className={styles.cardBottom}><span>{market.volume}</span><span>Closes {market.close}</span></div></Link></DitherCardFrame>)}
         </BentoGrid>
       </section>
 
@@ -85,10 +85,10 @@ export default function LandingPage() {
       <section className={styles.tokenCard}>
         <div className={styles.coinWrap}><EagCoin size="lg" /></div>
         <div><span>PLAY TOKENS</span><h2>EAG keeps the stakes social.</h2><p>EAG can&apos;t be bought, sold, withdrawn, or exchanged for prizes. It only tracks who made the better call.</p></div>
-        <Link href="/">Start with free EAG <ArrowRight size={15} /></Link>
+        <Link href="/markets">Start with free EAG <ArrowRight size={15} /></Link>
       </section>
 
-      <footer className={styles.footer}><span>© 2026 EagleMarket</span><span>Built for AHS</span><Link href="/">Enter app ↗</Link></footer>
+      <footer className={styles.footer}><span>© 2026 EagleMarket</span><span>Built for AHS</span><Link href="/markets">Enter app ↗</Link></footer>
     </main>
   );
 }
