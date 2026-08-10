@@ -5,9 +5,13 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
+import {
+  TurnstileWidget,
+  type TurnstileWidgetHandle,
+} from "@/components/turnstile-widget";
 import styles from "./auth.module.css";
 
 type AuthMode = "login" | "signup";
@@ -24,7 +28,10 @@ function BrandMark() {
 
 export default function AuthPage() {
   const router = useRouter();
+  const turnstileSiteKey = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
+  const turnstileRef = useRef<TurnstileWidgetHandle>(null);
   const [mode, setMode] = useState<AuthMode>("login");
+  const [captchaToken, setCaptchaToken] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [pending, setPending] = useState(false);
@@ -59,8 +66,29 @@ export default function AuthPage() {
     }
   }
 
+  function changeMode(nextMode: AuthMode) {
+    setMode(nextMode);
+    setMessage(null);
+    setCaptchaToken("");
+    turnstileRef.current?.reset();
+  }
+
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (!turnstileSiteKey) {
+      setMessage({
+        type: "error",
+        text: "Security check is not configured. Add the Turnstile site key and try again.",
+      });
+      return;
+    }
+
+    if (!captchaToken) {
+      setMessage({ type: "error", text: "Complete the security check to continue." });
+      return;
+    }
+
     setPending(true);
     setMessage(null);
 
@@ -73,15 +101,23 @@ export default function AuthPage() {
     callbackUrl.searchParams.set("next", "/markets");
 
     const result = mode === "login"
-      ? await supabase.auth.signInWithPassword({ email, password })
+      ? await supabase.auth.signInWithPassword({
+          email,
+          password,
+          options: { captchaToken },
+        })
       : await supabase.auth.signUp({
           email,
           password,
           options: {
             data: { full_name: fullName },
             emailRedirectTo: callbackUrl.toString(),
+            captchaToken,
           },
         });
+
+    setCaptchaToken("");
+    turnstileRef.current?.reset();
 
     if (result.error) {
       setMessage({ type: "error", text: result.error.message });
@@ -115,7 +151,7 @@ export default function AuthPage() {
                 role="tab"
                 aria-selected={mode === "login"}
                 className={mode === "login" ? styles.activeTab : ""}
-                onClick={() => setMode("login")}
+                onClick={() => changeMode("login")}
               >
                 Log in
               </button>
@@ -124,7 +160,7 @@ export default function AuthPage() {
                 role="tab"
                 aria-selected={mode === "signup"}
                 className={mode === "signup" ? styles.activeTab : ""}
-                onClick={() => setMode("signup")}
+                onClick={() => changeMode("signup")}
               >
                 Sign up
               </button>
@@ -188,21 +224,55 @@ export default function AuthPage() {
                 {mode === "login" && <button type="button" className={styles.textButton}>Forgot password?</button>}
               </div>
 
+              {turnstileSiteKey ? (
+                <div className={styles.turnstileBlock}>
+                  <span className={styles.turnstileLabel}>Security check</span>
+                  <TurnstileWidget
+                    ref={turnstileRef}
+                    siteKey={turnstileSiteKey}
+                    className={styles.turnstileWidget}
+                    onVerify={setCaptchaToken}
+                    onError={(errorCode) => {
+                      setMessage({
+                        type: "error",
+                        text: errorCode?.startsWith("110200")
+                          ? "This domain is not authorized for the security check. Add it in Turnstile Hostname Management."
+                          : "The security check could not load. Refresh the page and try again.",
+                      });
+                    }}
+                  />
+                </div>
+              ) : (
+                <p className={styles.formError} role="status">
+                  Turnstile is not configured for this environment.
+                </p>
+              )}
+
               {message && (
                 <p className={message.type === "error" ? styles.formError : styles.formSuccess} role="status">
                   {message.text}
                 </p>
               )}
 
-              <button type="submit" className={styles.submitButton} disabled={pending}>
-                {pending ? "Please wait…" : mode === "login" ? "Log in" : "Create account"}
+              <button
+                type="submit"
+                className={styles.submitButton}
+                disabled={pending || !captchaToken || !turnstileSiteKey}
+              >
+                {pending
+                  ? "Please wait…"
+                  : !captchaToken
+                    ? "Complete security check"
+                    : mode === "login"
+                      ? "Log in"
+                      : "Create account"}
                 <ArrowRight size={17} />
               </button>
             </form>
 
             <p className={styles.switchPrompt}>
               {mode === "login" ? "New to EagleMarket?" : "Already have an account?"}{" "}
-              <button type="button" onClick={() => setMode(mode === "login" ? "signup" : "login")}>
+              <button type="button" onClick={() => changeMode(mode === "login" ? "signup" : "login")}>
                 {mode === "login" ? "Create an account" : "Log in"}
               </button>
             </p>

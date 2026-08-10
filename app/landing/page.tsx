@@ -13,6 +13,14 @@ import styles from "./landing.module.css";
 
 const topics = ["AP Chemistry", "Friday football", "SPW", "Senior class", "Clubs", "Campus events"];
 
+// Placeholder roadmap — statuses and wording are drafts, edit freely.
+const roadmap = [
+  { status: "PLANNED", title: "Multi-choice markets", body: "Questions with more than two answers, priced by the same market maker. Who wins SPW, which team takes the title." },
+  { status: "PLANNED", title: "Class leagues", body: "Leaderboards split by graduating class, so 2027 can finally settle it with 2028." },
+  { status: "EXPLORING", title: "Student-proposed markets", body: "Submit a question, get it reviewed, then watch the whole school put a price on it." },
+  { status: "EXPLORING", title: "EAG on Solana", body: "We are working to make EAG tradable on the Solana blockchain." },
+];
+
 const markets = [
   { category: "AP Chemistry", question: "Will the next test average be above 82%?", chance: 64, volume: "18.4K EAG", close: "3 days", icon: FlaskConical, color: "#1498cf" },
   { category: "Athletics", question: "Will AHS win Friday's home game?", chance: 71, volume: "12.8K EAG", close: "Friday", icon: Trophy, color: "#2b9b70" },
@@ -107,6 +115,20 @@ export default function LandingPage() {
           </li>
         </ol>
         <p className={styles.howNote}><span>PRICING</span>Prices are set by a constant product market maker: a decentralized finance pricing formula that eliminates the need for traditional buyer-and-seller order books and automatically adjusts token prices based on trade sizes and liquidity pool ratios.</p>
+      </section>
+
+      <section className={styles.next} id="next">
+        <div className={styles.sectionHeading}><div><span>WHAT&apos;S NEXT</span><h2>Built in the open.</h2></div></div>
+        <p className={styles.nextLead}>EagleMarket is still being built. Here is what is on deck &mdash; nothing here is a promise on a date.</p>
+        <ul className={styles.nextGrid}>
+          {roadmap.map(item => (
+            <li key={item.title}>
+              <span className={`${styles.nextStatus} ${item.status === "PLANNED" ? styles.nextPlanned : styles.nextExploring}`}>{item.status}</span>
+              <h3>{item.title}</h3>
+              <p>{item.body}</p>
+            </li>
+          ))}
+        </ul>
       </section>
 
       <section className={styles.tokenCard}>
