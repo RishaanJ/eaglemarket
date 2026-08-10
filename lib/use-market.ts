@@ -52,6 +52,7 @@ export function useMarketData() {
       supabase
         .from("markets")
         .select("*, categories!inner(name, slug, color, icon_key)")
+        .eq("status", "open")
         .order("created_at", { ascending: true }),
     ]);
 
@@ -131,6 +132,11 @@ export function useMarketData() {
         { event: "UPDATE", schema: "public", table: "markets" },
         (payload) => {
           const updated = payload.new as MarketRow;
+          if (updated.status !== "open") {
+            setMarkets((current) => current.filter((market) => market.id !== updated.id));
+            if (updated.id === heroMarketId) void load();
+            return;
+          }
           setMarkets((current) =>
             current.map((market) =>
               market.id === updated.id
@@ -176,7 +182,7 @@ export function useMarketData() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [heroMarketId, supabase, userId]);
+  }, [heroMarketId, load, supabase, userId]);
 
   const executeTrade = useCallback(
     async (marketId: number, amount: number, outcome: "yes" | "no") => {

@@ -1,11 +1,13 @@
 "use client";
 
-import { Check, LoaderCircle, LogOut, Menu, Search, ShieldCheck } from "lucide-react";
+import { Check, GraduationCap, Lock, LoaderCircle, LogOut, Menu, Search, Settings, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, type FormEvent } from "react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { createClient } from "@/lib/supabase/client";
+import { MotionReveal } from "@/components/ui/motion-reveal";
 
 function EagleMark() {
   return (
@@ -34,6 +36,7 @@ export default function SettingsClient({
   provider,
   displayName: initialDisplayName,
   graduationYear: initialGraduationYear,
+  role,
   balance,
 }: {
   userId: string;
@@ -41,6 +44,7 @@ export default function SettingsClient({
   provider: string;
   displayName: string;
   graduationYear: number | null;
+  role: string;
   balance: number;
 }) {
   const router = useRouter();
@@ -117,7 +121,7 @@ export default function SettingsClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
-          <Link className="signup settings-active" href="/settings">Settings</Link>
+          <Link className="icon-button settings-active" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button
           className="mobile-menu"
@@ -138,75 +142,111 @@ export default function SettingsClient({
       )}
 
       <main className="settings-main">
+        <MotionReveal>
         <div className="settings-intro">
           <h1>Account settings</h1>
           <p>Manage how you appear across EagleMarket and review your sign-in details.</p>
         </div>
+        </MotionReveal>
 
-        <div className="settings-layout">
-          <aside className="settings-profile-summary">
+        <MotionReveal delay={0.05}>
+        <Card className="settings-identity">
+          <CardContent className="settings-identity-inner">
             <span className="settings-avatar">{initials(displayName)}</span>
-            <h2>{displayName}</h2>
-            <p>{email}</p>
-            <div><span>Balance</span><strong>{balance.toLocaleString()} EAG</strong></div>
-          </aside>
-
-          <div className="settings-content">
-            <form className="settings-card" onSubmit={saveProfile}>
-              <div className="settings-card-heading">
-                <div><h2>Profile</h2><p>This information appears on rankings and your public activity.</p></div>
+            <div className="settings-identity-name">
+              <h2>{displayName}</h2>
+              <p>{email}</p>
+              <div className="settings-chips">
+                <span className="settings-chip"><ShieldCheck size={12} /> {provider === "google" ? "Google" : "Email"}</span>
+                {graduationYear && <span className="settings-chip"><GraduationCap size={12} /> Class of {graduationYear}</span>}
               </div>
-              <div className="settings-fields">
-                <label>
-                  <span>Display name</span>
+            </div>
+            <div className="settings-balance">
+              <span>BALANCE</span>
+              <strong><EagCoin size="sm" />{balance.toLocaleString()} <small>EAG</small></strong>
+            </div>
+          </CardContent>
+        </Card>
+        </MotionReveal>
+
+        <MotionReveal delay={0.1}>
+        <div className="settings-content">
+          <form onSubmit={saveProfile}>
+            <Card className="settings-card">
+            <CardHeader className="border-b">
+              <CardTitle>Profile</CardTitle>
+              <CardDescription>This information appears on rankings and your public activity.</CardDescription>
+            </CardHeader>
+            <CardContent className="settings-fields">
+              <label>
+                <span>Display name</span>
+                <div className="settings-input-wrap">
                   <input
                     value={displayName}
                     onChange={(event) => { setDisplayName(event.target.value); setSaveState("idle"); }}
                     maxLength={80}
                     autoComplete="name"
                   />
-                </label>
-                <label>
-                  <span>Graduation year</span>
+                </div>
+              </label>
+              <label>
+                <span>Graduation year</span>
+                <div className="settings-input-wrap">
                   <input
                     value={graduationYear}
-                    onChange={(event) => { setGraduationYear(event.target.value); setSaveState("idle"); }}
+                    onChange={(event) => { setGraduationYear(event.target.value.replace(/\D/g, "").slice(0, 4)); setSaveState("idle"); }}
                     inputMode="numeric"
+                    maxLength={4}
                     placeholder="2027"
                   />
-                </label>
-                <label className="settings-email-field">
-                  <span>School email</span>
+                </div>
+              </label>
+              <label className="settings-email-field">
+                <span>School email</span>
+                <div className="settings-input-wrap">
                   <input value={email} readOnly aria-readonly="true" />
-                  <small>Your email is managed by your sign-in provider.</small>
-                </label>
-              </div>
-              <div className="settings-form-footer">
-                <span className={saveState === "error" ? "settings-message error" : "settings-message"} role="status">
-                  {saveState === "saved" && <Check size={14} />}{message}
-                </span>
-                <button type="submit" disabled={saveState === "saving"}>
-                  {saveState === "saving" ? <><LoaderCircle className="trade-spinner" size={15} /> Saving…</> : "Save changes"}
-                </button>
-              </div>
-            </form>
+                  <span className="settings-input-lock"><Lock size={14} /></span>
+                </div>
+                <small>Your email is managed by your sign-in provider.</small>
+              </label>
+            </CardContent>
+            <CardFooter className="settings-form-footer border-t">
+              <span className={saveState === "error" ? "settings-message error" : "settings-message"} role="status">
+                {saveState === "saved" && <Check size={14} />}{message}
+              </span>
+              <button type="submit" disabled={saveState === "saving"}>
+                {saveState === "saving" ? <><LoaderCircle className="trade-spinner" size={15} /> Saving…</> : "Save changes"}
+              </button>
+            </CardFooter>
+            </Card>
+          </form>
 
-            <section className="settings-card settings-access-card">
-              <div className="settings-card-heading">
-                <div><h2>Access</h2><p>Your connected account and current session.</p></div>
-              </div>
-              <div className="provider-row">
+          <Card className="settings-card">
+            <CardHeader className="border-b">
+              <CardTitle>Access</CardTitle>
+              <CardDescription>Your connected account and current session.</CardDescription>
+            </CardHeader>
+            <CardContent className="settings-rows">
+              <div className="settings-row">
                 <span className="provider-icon"><ShieldCheck size={18} /></span>
                 <div><strong>{provider === "google" ? "Google" : "Email"}</strong><span>Connected as {email}</span></div>
                 <span className="provider-status"><i /> Connected</span>
               </div>
-              <div className="settings-signout-row">
+              {role === "admin" && (
+                <Link className="settings-row admin-access-row" href="/admin">
+                  <span className="provider-icon"><ShieldCheck size={18} /></span>
+                  <div><strong>Admin panel</strong><span>Create, close, and resolve school markets.</span></div>
+                  <span>Open admin →</span>
+                </Link>
+              )}
+              <div className="settings-row">
                 <div><strong>Sign out</strong><span>End your EagleMarket session on this device.</span></div>
-                <button onClick={signOut}><LogOut size={15} /> Sign out</button>
+                <button className="signout-button" type="button" onClick={signOut}><LogOut size={15} /> Sign out</button>
               </div>
-            </section>
-          </div>
+            </CardContent>
+          </Card>
         </div>
+        </MotionReveal>
       </main>
     </div>
   );

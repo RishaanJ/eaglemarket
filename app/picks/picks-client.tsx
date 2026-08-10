@@ -8,6 +8,7 @@ import {
   Menu,
   Mic2,
   Search,
+  Settings,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
@@ -164,7 +165,7 @@ export default function PicksClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
-          <Link className="signup" href="/settings">Settings</Link>
+          <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button
           className="mobile-menu"
@@ -197,6 +198,7 @@ export default function PicksClient({
           </div>
         </BlurFade>
 
+        <BlurFade duration={0.3} delay={0.04} blur="3px">
         <section className="picks-showcase" aria-label="Portfolio overview">
           <div className="featured-positions-area">
             <div className="featured-positions-heading">
@@ -292,6 +294,7 @@ export default function PicksClient({
             <Link href="/markets">Browse markets <ArrowRight size={15} /></Link>
           </aside>
         </section>
+        </BlurFade>
 
         {selectedPosition ? (
           <BlurFade inView duration={0.3} blur="3px">
@@ -438,6 +441,7 @@ export default function PicksClient({
         )}
 
         {recentPicks.length > 0 && (
+          <BlurFade inView duration={0.28} blur="3px">
           <section className="recent-picks">
             <div className="positions-heading">
               <div><h2>Recent activity</h2><span>Latest predictions</span></div>
@@ -452,6 +456,7 @@ export default function PicksClient({
               ))}
             </div>
           </section>
+          </BlurFade>
         )}
       </main>
     </div>

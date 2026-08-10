@@ -1,17 +1,17 @@
 "use client";
 
-import { ArrowRight, Menu, Search, Trophy } from "lucide-react";
+import { ArrowRight, Menu, Search, Settings, Trophy } from "lucide-react";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
+import { MotionReveal } from "@/components/ui/motion-reveal";
 
 export type RankingEntry = {
   rank: number;
-  userId: string;
   displayName: string;
-  avatarUrl: string | null;
   graduationYear: number | null;
+  isCurrentUser: boolean;
   portfolioValue: number;
   openPositions: number;
   totalPicks: number;
@@ -48,17 +48,15 @@ function winRate(entry: RankingEntry) {
 
 export default function RankingsClient({
   balance,
-  currentUserId,
   rankings,
 }: {
   balance: number;
-  currentUserId: string;
   rankings: RankingEntry[];
 }) {
   const [query, setQuery] = useState("");
   const [mobileOpen, setMobileOpen] = useState(false);
   const leader = rankings[0] ?? null;
-  const currentUser = rankings.find((entry) => entry.userId === currentUserId) ?? null;
+  const currentUser = rankings.find((entry) => entry.isCurrentUser) ?? null;
   const visibleRankings = useMemo(
     () => rankings.filter((entry) => entry.displayName.toLowerCase().includes(query.trim().toLowerCase())),
     [query, rankings],
@@ -89,7 +87,7 @@ export default function RankingsClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
-          <Link className="signup" href="/settings">Settings</Link>
+          <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button
           className="mobile-menu"
@@ -110,6 +108,7 @@ export default function RankingsClient({
       )}
 
       <main className="rankings-main">
+        <MotionReveal>
         <div className="rankings-intro">
           <div>
             <h1>School rankings</h1>
@@ -117,8 +116,10 @@ export default function RankingsClient({
           </div>
           <Link href="/markets">Make a pick <ArrowRight size={16} /></Link>
         </div>
+        </MotionReveal>
 
         {leader ? (
+          <MotionReveal delay={0.06}>
           <section className="rankings-overview" aria-label="Ranking highlights">
             <DitherCardFrame
               className="rankings-leader-dither"
@@ -155,10 +156,12 @@ export default function RankingsClient({
               </div>
             </aside>
           </section>
+          </MotionReveal>
         ) : (
           <div className="rankings-empty">Rankings will appear after the first student joins.</div>
         )}
 
+        <MotionReveal delay={0.12}>
         <section className="leaderboard-section">
           <div className="leaderboard-heading">
             <div><h2>Leaderboard</h2><span>{rankings.length} students ranked</span></div>
@@ -170,14 +173,14 @@ export default function RankingsClient({
             </div>
             {visibleRankings.map((entry) => (
               <div
-                className={`leaderboard-row${entry.userId === currentUserId ? " current-user" : ""}`}
-                key={entry.userId}
+                className={`leaderboard-row${entry.isCurrentUser ? " current-user" : ""}`}
+                key={entry.rank}
               >
                 <span className={`rank-number rank-${Math.min(entry.rank, 4)}`}>{entry.rank}</span>
                 <div className="ranking-student">
                   <span className="ranking-avatar">{initials(entry.displayName)}</span>
                   <div><strong>{entry.displayName}</strong><small>{entry.graduationYear ? `Class of ${entry.graduationYear}` : "AHS student"}</small></div>
-                  {entry.userId === currentUserId && <em>You</em>}
+                  {entry.isCurrentUser && <em>You</em>}
                 </div>
                 <strong className="ranking-portfolio">{formatEag(entry.portfolioValue)} <small>EAG</small></strong>
                 <span>{entry.totalPicks}</span>
@@ -187,6 +190,7 @@ export default function RankingsClient({
             {!visibleRankings.length && <div className="rankings-empty">No students match that search.</div>}
           </div>
         </section>
+        </MotionReveal>
       </main>
     </div>
   );

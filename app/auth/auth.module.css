@@ -125,17 +125,34 @@
 .switchPrompt { margin: 20px 0 0; color: #647079; font-size: 12px; text-align: center; }
 .legal { margin: 0; color: #737e85; font-size: 10px; }
 
-.visualPanel { position: relative; min-width: 0; min-height: 100svh; overflow: hidden; background: #087fb2; color: white; }
+.visualPanel { position: relative; min-width: 0; min-height: 100svh; overflow: hidden; isolation: isolate; background: #043d5b; color: white; }
 .visualPanel canvas { display: block; }
-.visualFade { position: absolute; inset: 0; background: linear-gradient(180deg, rgb(5 93 132 / 0.05), rgb(4 70 101 / 0.58)); }
-.visualContent { position: relative; z-index: 1; width: min(100%, 760px); height: 100%; min-height: 100svh; margin: auto; display: grid; place-items: center; }
+.baseDither { position: absolute; inset: -8%; transform: scale(1.12); }
+.visualGlow { position: absolute; z-index: 1; inset: 0; background: radial-gradient(circle at 53% 46%, rgb(96 222 255 / .32), transparent 43%), linear-gradient(180deg, rgb(2 38 57 / .05), rgb(2 35 52 / .54)); pointer-events: none; }
+.visualGrid { position: absolute; z-index: 1; inset: 0; opacity: .16; background-image: linear-gradient(rgb(202 245 255 / .28) 1px, transparent 1px), linear-gradient(90deg, rgb(202 245 255 / .28) 1px, transparent 1px); background-size: 56px 56px; mask-image: radial-gradient(circle at center, black, transparent 74%); pointer-events: none; }
+.visualContent { position: relative; z-index: 2; width: min(100%, 820px); height: 100%; min-height: 100svh; margin: auto; display: grid; place-items: center; }
 .previewTopline { display: flex; align-items: center; justify-content: space-between; font-size: 10px; font-weight: 700; letter-spacing: 0.08em; }
 .liveDot { display: flex; align-items: center; gap: 7px; letter-spacing: 0; }
 .liveDot::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: #72f0c0; box-shadow: 0 0 0 5px rgb(114 240 192 / 0.12); }
 
-.signalGraphic { position: relative; width: min(34vw, 420px); aspect-ratio: 1; margin: auto; display: grid; place-items: center; }
-.signalGraphic::before { content: ""; position: absolute; inset: 10%; border-radius: 50%; background: radial-gradient(circle, rgb(134 230 255 / .2), transparent 68%); filter: blur(18px); }
-.signalMark { position: relative; z-index: 1; width: 190px; height: 132px; display: block; opacity: .82; filter: drop-shadow(0 12px 30px rgb(2 53 80 / .2)); transform: rotate(-8deg); mix-blend-mode: screen; }.signalMark i { position: absolute; right: 0; height: 15px; border-radius: 99px; background: linear-gradient(90deg, rgb(255 255 255 / .36), #fff); transform: rotate(-18deg); }.signalMark i:nth-child(1) { top: 8px; width: 184px; }.signalMark i:nth-child(2) { top: 55px; width: 138px; }.signalMark i:nth-child(3) { top: 102px; width: 86px; }
+.visualStage { position: relative; width: min(82%, 650px); aspect-ratio: 1; display: grid; place-items: center; }
+.signalGraphic { position: relative; z-index: 3; width: 72%; aspect-ratio: 1.04; overflow: hidden; display: grid; place-items: center; border: 1px solid rgb(210 247 255 / .38); border-radius: 38% 62% 56% 44% / 52% 38% 62% 48%; background: rgb(5 64 89 / .36); box-shadow: inset 0 1px 0 rgb(255 255 255 / .28), 0 18px 38px rgb(2 31 47 / .24); animation: signal-float 9s ease-in-out infinite alternate; }
+.signalGraphic::after { content: ""; position: absolute; inset: 0; background: linear-gradient(128deg, rgb(255 255 255 / .15), transparent 34% 70%, rgb(37 190 230 / .16)); pointer-events: none; }
+.signalMark { position: relative; z-index: 4; width: 158px; height: 112px; display: block; opacity: .9; filter: drop-shadow(0 12px 24px rgb(2 44 63 / .26)); transform: rotate(-8deg); mix-blend-mode: screen; }.signalMark i { position: absolute; right: 0; height: 13px; border-radius: 99px; background: linear-gradient(90deg, rgb(255 255 255 / .4), #fff); transform: rotate(-18deg); }.signalMark i:nth-child(1) { top: 8px; width: 154px; }.signalMark i:nth-child(2) { top: 48px; width: 116px; }.signalMark i:nth-child(3) { top: 88px; width: 72px; }
+.marketTrace { position: absolute; z-index: 2; inset: 8%; width: 84%; height: 84%; opacity: .32; }
+.marketTrace path { stroke: white; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vector-effect: non-scaling-stroke; }
+.marketTrace circle { fill: white; filter: drop-shadow(0 0 5px white); }
+.ditherFragment { position: absolute; z-index: 2; overflow: hidden; border: 1px solid rgb(210 247 255 / .28); background: rgb(5 64 89 / .16); box-shadow: inset 0 1px 0 rgb(255 255 255 / .14); }
+.fragmentOne { left: -3%; top: 3%; width: 36%; aspect-ratio: .88; border-radius: 46% 54% 38% 62% / 48% 40% 60% 52%; transform: rotate(-17deg); animation: fragment-one 11s ease-in-out infinite alternate; }
+.fragmentTwo { right: -1%; bottom: 4%; width: 31%; aspect-ratio: 1.12; border-radius: 62% 38% 58% 42% / 43% 57% 43% 57%; transform: rotate(14deg); animation: fragment-two 13s ease-in-out infinite alternate; }
+.orbit { position: absolute; z-index: 1; border: 1px solid rgb(193 242 255 / .19); border-radius: 50%; }
+.orbitOne { inset: 7%; animation: orbit-drift 18s linear infinite; }
+.orbitTwo { inset: 19%; border-style: dashed; opacity: .8; animation: orbit-drift 13s linear infinite reverse; }
+.orbitOne::before, .orbitTwo::before { content: ""; position: absolute; top: 48%; left: -4px; width: 8px; height: 8px; border-radius: 50%; background: #b9f2ff; box-shadow: 0 0 16px rgb(185 242 255 / .8); }
+@keyframes signal-float { from { transform: translate3d(-5px, 8px, 0) rotate(-1.5deg); } to { transform: translate3d(7px, -8px, 0) rotate(1.5deg); } }
+@keyframes fragment-one { from { transform: translate3d(0, 0, 0) rotate(-17deg); } to { transform: translate3d(18px, 14px, 0) rotate(-10deg); } }
+@keyframes fragment-two { from { transform: translate3d(0, 0, 0) rotate(14deg); } to { transform: translate3d(-17px, -12px, 0) rotate(7deg); } }
+@keyframes orbit-drift { to { transform: rotate(360deg); } }
 .signalLabel { position: absolute; padding: 7px 10px; border: 1px solid rgb(255 255 255 / .22); border-radius: 999px; background: rgb(5 74 107 / .2); color: rgb(255 255 255 / .76); font-size: 8px; font-weight: 700; letter-spacing: .12em; backdrop-filter: blur(5px); }.signalLabel:nth-of-type(1) { left: 2%; top: 45%; }.signalLabel:nth-of-type(2) { right: 4%; top: 27%; }.signalLabel:nth-of-type(3) { right: 10%; bottom: 17%; }
 .visualCopy { max-width: 570px; margin: 0 auto; }
 .visualKicker { color: #aeeaff; font-size: 9px; font-weight: 700; letter-spacing: .12em; }
@@ -150,6 +167,7 @@
   .formBody { padding: 64px 0; }
   .visualPanel { min-height: 680px; }
   .visualContent { min-height: 680px; }
+  .visualStage { width: min(74%, 560px); }
 }
 
 @media (max-width: 560px) {
@@ -159,12 +177,13 @@
   .formOptions { align-items: flex-start; }
   .visualPanel { min-height: 570px; }
   .visualContent { min-height: 570px; padding: 28px 20px; }
-  .signalGraphic { width: 300px; max-width: 90%; margin-top: 24px; }
-  .signalMark { transform: scale(.72) rotate(-8deg); }
+  .visualStage { width: min(94%, 460px); }
+  .signalMark { transform: scale(.76) rotate(-8deg); }
   .visualCopy h2 { font-size: 2.75rem; }
   .visualCopy > div { flex-wrap: wrap; gap: 9px 16px; }
 }
 
 @media (prefers-reduced-motion: reduce) {
   .googleButton, .submitButton, .form input { transition: none; }
+  .signalGraphic, .fragmentOne, .fragmentTwo, .orbitOne, .orbitTwo { animation: none; }
 }

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
 import { createClient } from "@/lib/supabase/client";
+import { MotionReveal } from "@/components/ui/motion-reveal";
 import styles from "./auth.module.css";
 
 type AuthMode = "login" | "signup";
@@ -35,7 +36,7 @@ export default function AuthPage() {
     update();
     const callbackError = new URLSearchParams(window.location.search).get("error");
     if (callbackError) {
-      queueMicrotask(() => setMessage({ type: "error", text: callbackError }));
+      queueMicrotask(() => setMessage({ type: "error", text: callbackError.slice(0, 180) }));
     }
     media.addEventListener("change", update);
     return () => media.removeEventListener("change", update);
@@ -45,10 +46,11 @@ export default function AuthPage() {
     setPending(true);
     setMessage(null);
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", "/markets");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${siteUrl}/auth/callback?next=/markets` },
+      options: { redirectTo: callbackUrl.toString() },
     });
 
     if (error) {
@@ -67,7 +69,8 @@ export default function AuthPage() {
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("name") ?? "").trim();
     const supabase = createClient();
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL ?? window.location.origin;
+    const callbackUrl = new URL("/auth/callback", window.location.origin);
+    callbackUrl.searchParams.set("next", "/markets");
 
     const result = mode === "login"
       ? await supabase.auth.signInWithPassword({ email, password })
@@ -76,7 +79,7 @@ export default function AuthPage() {
           password,
           options: {
             data: { full_name: fullName },
-            emailRedirectTo: `${siteUrl}/auth/callback?next=/markets`,
+            emailRedirectTo: callbackUrl.toString(),
           },
         });
 
@@ -105,7 +108,7 @@ export default function AuthPage() {
             <span>EagleMarket</span>
           </Link>
 
-          <div className={styles.formBody}>
+          <MotionReveal className={styles.formBody} distance={8}>
             <div className={styles.modeTabs} role="tablist" aria-label="Account action">
               <button
                 type="button"
@@ -203,27 +206,79 @@ export default function AuthPage() {
                 {mode === "login" ? "Create an account" : "Log in"}
               </button>
             </p>
-          </div>
+          </MotionReveal>
 
           <p className={styles.legal}>For AHS students · Play tokens only · No cash value</p>
         </div>
       </section>
 
       <aside className={styles.visualPanel} aria-label="EagleMarket preview">
-        <Dithering
-          colorBack="#087fb2"
-          colorFront="#75daf4"
-          shape="wave"
-          type="4x4"
-          size={3.2}
-          speed={reducedMotion ? 0 : 0.06}
-          scale={0.86}
-          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
-        />
-        <div className={styles.visualFade} />
+        <div className={styles.baseDither}>
+          <Dithering
+            colorBack="#043d5b"
+            colorFront="#22b8e6"
+            shape="warp"
+            type="4x4"
+            size={2.4}
+            speed={reducedMotion ? 0 : 0.22}
+            scale={0.62}
+            rotation={-8}
+            style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+          />
+        </div>
+        <div className={styles.visualGlow} />
+        <div className={styles.visualGrid} />
         <div className={styles.visualContent}>
-          <div className={styles.signalGraphic} aria-hidden="true">
-            <span className={styles.signalMark}><i /><i /><i /></span>
+          <div className={styles.visualStage} aria-hidden="true">
+            <i className={`${styles.orbit} ${styles.orbitOne}`} />
+            <i className={`${styles.orbit} ${styles.orbitTwo}`} />
+
+            <div className={`${styles.ditherFragment} ${styles.fragmentOne}`}>
+              <Dithering
+                colorBack="#075b7b00"
+                colorFront="#a9efff9e"
+                shape="ripple"
+                type="8x8"
+                size={2.2}
+                speed={reducedMotion ? 0 : 0.18}
+                scale={0.72}
+                offsetX={0.12}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              />
+            </div>
+
+            <div className={styles.signalGraphic}>
+              <Dithering
+                colorBack="#073e59cc"
+                colorFront="#c8f6ff"
+                shape="sphere"
+                type="4x4"
+                size={2.1}
+                speed={reducedMotion ? 0 : 0.3}
+                scale={0.88}
+                rotation={12}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              />
+              <svg className={styles.marketTrace} viewBox="0 0 440 310" fill="none">
+                <path d="M23 238H88V215H145V226H206V176H260V152H322V106H414V62" />
+                <circle cx="414" cy="62" r="5" />
+              </svg>
+              <span className={styles.signalMark}><i /><i /><i /></span>
+            </div>
+
+            <div className={`${styles.ditherFragment} ${styles.fragmentTwo}`}>
+              <Dithering
+                colorBack="#075b7b00"
+                colorFront="#d4f8ff87"
+                shape="dots"
+                type="2x2"
+                size={2.6}
+                speed={reducedMotion ? 0 : 0.16}
+                scale={0.68}
+                rotation={18}
+                style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+              />
+            </div>
           </div>
         </div>
       </aside>

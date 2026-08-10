@@ -1,8 +1,31 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+const AUTH_DESTINATIONS = new Set(["/markets", "/picks", "/rankings", "/settings", "/admin"]);
+
 function safeNextPath(value: string | null) {
-  return value?.startsWith("/") && !value.startsWith("//") ? value : "/markets";
+  if (!value || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) return "/markets";
+
+  try {
+    const base = new URL("https://eaglemarket.invalid");
+    const destination = new URL(value, base);
+    return destination.origin === base.origin && AUTH_DESTINATIONS.has(destination.pathname)
+      ? destination.pathname
+      : "/markets";
+  } catch {
+    return "/markets";
+  }
+}
+
+function redirectResponse(path: string) {
+  return new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: path,
+      "Cache-Control": "no-store",
+      "Referrer-Policy": "no-referrer",
+    },
+  });
 }
 
 export async function GET(request: NextRequest) {
@@ -11,9 +34,9 @@ export async function GET(request: NextRequest) {
   const providerError = request.nextUrl.searchParams.get("error_description");
 
   if (providerError) {
-    const errorUrl = new URL("/auth", request.url);
-    errorUrl.searchParams.set("error", providerError);
-    return NextResponse.redirect(errorUrl);
+    const providerCode = request.nextUrl.searchParams.get("error")?.slice(0, 40) ?? "provider_error";
+    console.warn("OAuth provider rejected sign in", { providerCode });
+    return redirectResponse("/auth?error=We%20couldn%27t%20complete%20sign%20in.%20Please%20try%20again.");
   }
 
   if (code) {
@@ -21,15 +44,12 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      return NextResponse.redirect(new URL(next, request.url));
+      return redirectResponse(next);
     }
 
-    const errorUrl = new URL("/auth", request.url);
-    errorUrl.searchParams.set("error", error.message);
-    return NextResponse.redirect(errorUrl);
+    console.error("OAuth code exchange failed", { code: error.code });
+    return redirectResponse("/auth?error=We%20couldn%27t%20complete%20sign%20in.%20Please%20try%20again.");
   }
 
-  const errorUrl = new URL("/auth", request.url);
-  errorUrl.searchParams.set("error", "Google did not return an authorization code. Please try again.");
-  return NextResponse.redirect(errorUrl);
+  return redirectResponse("/auth?error=Google%20did%20not%20return%20an%20authorization%20code.%20Please%20try%20again.");
 }

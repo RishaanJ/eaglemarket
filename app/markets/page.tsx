@@ -21,13 +21,17 @@ import {
   Menu,
   Mic2,
   Search,
+  Settings,
   Trophy,
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { AppLoadingSkeleton } from "@/components/ui/app-loading-skeleton";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
+import { MotionReveal } from "@/components/ui/motion-reveal";
 import { calculateProbability } from "@/lib/amm";
 import { useMarketData, type SyncedMarket } from "@/lib/use-market";
 
@@ -109,6 +113,7 @@ function MarketCard({
   onTrade: (id: number, isBuyingYes: boolean) => Promise<void>;
 }) {
   const [side, setSide] = useState<"yes" | "no" | null>(null);
+  const reducedMotion = useReducedMotion();
   const Icon = categoryIcons[market.category.slug] ?? CalendarDays;
   const probYes = Math.round(
     calculateProbability(Number(market.pool_yes), Number(market.pool_no)) * 100
@@ -160,9 +165,18 @@ function MarketCard({
     </article>
   );
   return (
-    <DitherCardFrame icon={Icon} color={market.category.color}>
-      {card}
-    </DitherCardFrame>
+    <motion.div
+      className="market-card-motion"
+      layout
+      initial={reducedMotion ? { opacity: 1 } : { opacity: 0, y: 10, scale: .99 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={reducedMotion ? { opacity: 0 } : { opacity: 0, y: -6, scale: .99 }}
+      transition={{ duration: reducedMotion ? 0 : .24, ease: [0.16, 1, 0.3, 1] }}
+    >
+      <DitherCardFrame icon={Icon} color={market.category.color}>
+        {card}
+      </DitherCardFrame>
+    </motion.div>
   );
 }
 
@@ -243,7 +257,7 @@ export default function Home() {
   );
 
   if (loading) {
-    return <main className="sync-state">Loading EagleMarket…</main>;
+    return <AppLoadingSkeleton kind="markets" />;
   }
 
   if (!heroMarket) {
@@ -282,7 +296,7 @@ export default function Home() {
           <button className="token-balance">
             <EagCoin size="sm" /> {userBalance.toLocaleString()} EAG
           </button>
-          <Link className="signup" href="/settings">Settings</Link>
+          <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button
           className="mobile-menu"
@@ -319,6 +333,7 @@ export default function Home() {
       <main>
         {error && <div className="sync-error" role="alert">{error}</div>}
         {activeCategory === "Trending" && (
+        <MotionReveal>
         <section className="hero-market" id="markets">
           <div className="hero-copy">
             <h1>{heroMarket.question}</h1>
@@ -518,8 +533,10 @@ export default function Home() {
             </p>
           </aside>
         </section>
+        </MotionReveal>
         )}
 
+        <MotionReveal delay={0.08}>
         <section className="market-section mt-12">
           <div className="section-heading">
             <div>
@@ -530,20 +547,23 @@ export default function Home() {
               View all markets <ArrowRight size={17} />
             </button>
           </div>
-          <div className="market-grid">
+          <motion.div className="market-grid" layout>
             {visibleMarkets.length ? (
-              visibleMarkets.map((market) => (
+              <AnimatePresence mode="popLayout" initial={false}>
+              {visibleMarkets.map((market) => (
                 <MarketCard
                   key={market.id}
                   market={market}
                   onTrade={handleGridMarketTrade}
                 />
-              ))
+              ))}
+              </AnimatePresence>
             ) : (
               <div className="empty-state">No markets match this search yet.</div>
             )}
-          </div>
+          </motion.div>
         </section>
+        </MotionReveal>
       </main>
       {tradeFeedback && <TradeConfirmation key={tradeFeedback.id} feedback={tradeFeedback} />}
     </div>

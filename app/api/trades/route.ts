@@ -18,25 +18,74 @@ function errorResponse(message: string, status: number) {
   );
 }
 
-export async function POST(request: NextRequest) {
-  const origin = request.headers.get("origin");
-  if (origin && origin !== request.nextUrl.origin) {
-    return errorResponse("Cross-origin trade requests are not allowed.", 403);
+async function readBoundedJson(request: NextRequest): Promise<TradeRequest> {
+  if (!request.body) throw new Error("EMPTY_BODY");
+
+  const reader = request.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let totalBytes = 0;
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      totalBytes += value.byteLength;
+      if (totalBytes > MAX_BODY_BYTES) throw new Error("BODY_TOO_LARGE");
+      chunks.push(value);
+    }
+  } catch (error) {
+    await reader.cancel().catch(() => undefined);
+    throw error;
   }
 
-  if (!request.headers.get("content-type")?.toLowerCase().includes("application/json")) {
+  const bytes = new Uint8Array(totalBytes);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+
+  return JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)) as TradeRequest;
+}
+
+export async function POST(request: NextRequest) {
+  const fetchSite = request.headers.get("sec-fetch-site");
+  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
+    return errorResponse("Cross-site trade requests are not allowed.", 403);
+  }
+
+  const origin = request.headers.get("origin");
+  if (origin) {
+    try {
+      if (new URL(origin).origin !== request.nextUrl.origin) {
+        return errorResponse("Cross-origin trade requests are not allowed.", 403);
+      }
+    } catch {
+      return errorResponse("Invalid request origin.", 403);
+    }
+  }
+
+  const mediaType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
+  if (mediaType !== "application/json") {
     return errorResponse("Content-Type must be application/json.", 415);
   }
 
-  const contentLength = Number(request.headers.get("content-length") ?? 0);
-  if (Number.isFinite(contentLength) && contentLength > MAX_BODY_BYTES) {
-    return errorResponse("Request body is too large.", 413);
+  const contentLengthHeader = request.headers.get("content-length");
+  if (contentLengthHeader) {
+    const contentLength = Number(contentLengthHeader);
+    if (!Number.isSafeInteger(contentLength) || contentLength < 0) {
+      return errorResponse("Invalid Content-Length header.", 400);
+    }
+    if (contentLength > MAX_BODY_BYTES) return errorResponse("Request body is too large.", 413);
   }
 
   let body: TradeRequest;
   try {
-    body = (await request.json()) as TradeRequest;
-  } catch {
+    body = await readBoundedJson(request);
+  } catch (error) {
+    if (error instanceof Error && error.message === "BODY_TOO_LARGE") {
+      return errorResponse("Request body is too large.", 413);
+    }
     return errorResponse("Invalid JSON request.", 400);
   }
 

@@ -11,7 +11,7 @@ export default async function SettingsPage() {
   const [profileResult, walletResult] = await Promise.all([
     supabase
       .from("profiles")
-      .select("display_name, graduation_year")
+      .select("display_name, graduation_year, role")
       .eq("user_id", authData.user.id)
       .single(),
     supabase.from("wallets").select("balance").eq("user_id", authData.user.id).single(),
@@ -35,6 +35,7 @@ export default async function SettingsPage() {
       provider={typeof provider === "string" ? provider : "email"}
       displayName={profileResult.data.display_name}
       graduationYear={profileResult.data.graduation_year}
+      role={profileResult.data.role}
       balance={Number(walletResult.data.balance)}
     />
   );

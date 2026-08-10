@@ -24,10 +24,9 @@ export default async function RankingsPage() {
 
   const rankings: RankingEntry[] = (rankingsResult.data ?? []).map((entry) => ({
     rank: Number(entry.rank),
-    userId: entry.user_id,
     displayName: entry.display_name,
-    avatarUrl: entry.avatar_url,
     graduationYear: entry.graduation_year,
+    isCurrentUser: entry.is_current_user,
     portfolioValue: Number(entry.portfolio_value),
     openPositions: Number(entry.open_positions),
     totalPicks: Number(entry.total_picks),
@@ -38,7 +37,6 @@ export default async function RankingsPage() {
   return (
     <RankingsClient
       balance={Number(walletResult.data.balance)}
-      currentUserId={authData.user.id}
       rankings={rankings}
     />
   );

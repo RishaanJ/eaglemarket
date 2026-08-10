@@ -567,6 +567,61 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_create_market: {
+        Args: {
+          p_category_id: number;
+          p_closes_at: string;
+          p_description: string;
+          p_initial_liquidity?: number;
+          p_opens_at: string;
+          p_question: string;
+          p_resolution_criteria: string;
+          p_resolution_source_url: string;
+          p_status?: string;
+        };
+        Returns: number;
+      };
+      admin_list_markets: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          category_color: string;
+          category_id: number;
+          category_name: string;
+          closes_at: string;
+          created_at: string;
+          description: string | null;
+          id: number;
+          opens_at: string;
+          pool_no: number;
+          pool_yes: number;
+          position_count: number;
+          question: string;
+          resolution_criteria: string;
+          resolution_source_url: string | null;
+          resolved_outcome: string | null;
+          status: string;
+          total_volume: number;
+          trade_count: number;
+        }[];
+      };
+      admin_resolve_market: {
+        Args: {
+          p_market_id: number;
+          p_outcome: string;
+          p_resolution_note?: string;
+        };
+        Returns: {
+          settled_positions: number;
+          total_payout: number;
+        }[];
+      };
+      admin_set_market_status: {
+        Args: {
+          p_market_id: number;
+          p_status: string;
+        };
+        Returns: string;
+      };
       execute_trade: {
         Args: {
           p_market_id: number;
@@ -588,15 +643,14 @@ export type Database = {
           result_limit?: number;
         };
         Returns: {
-          avatar_url: string | null;
           display_name: string;
           graduation_year: number | null;
+          is_current_user: boolean;
           open_positions: number;
           portfolio_value: number;
           rank: number;
           resolved_picks: number;
           total_picks: number;
-          user_id: string;
           wins: number;
         }[];
       };
