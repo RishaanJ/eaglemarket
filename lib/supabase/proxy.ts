@@ -1,10 +1,11 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
+import type { Database } from "@/lib/database.types";
 
 export async function updateSession(request: NextRequest) {
   let response = NextResponse.next({ request });
 
-  const supabase = createServerClient(
+  const supabase = createServerClient<Database>(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY!,
     {
@@ -26,7 +27,9 @@ export async function updateSession(request: NextRequest) {
 
   const { data, error } = await supabase.auth.getClaims();
   const isAuthenticated = !error && Boolean(data?.claims);
-  const isProtectedRoute = request.nextUrl.pathname.startsWith("/markets");
+  const isProtectedRoute = ["/markets", "/picks", "/rankings", "/settings"].some((route) =>
+    request.nextUrl.pathname.startsWith(route),
+  );
   const isAuthRoute = request.nextUrl.pathname === "/auth";
 
   if (isProtectedRoute && !isAuthenticated) {

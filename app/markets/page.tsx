@@ -13,9 +13,11 @@ import {
   ArrowRight,
   Bell,
   CalendarDays,
+  Check,
   ChevronDown,
   Clock3,
   FlaskConical,
+  LoaderCircle,
   Menu,
   Mic2,
   Search,
@@ -23,83 +25,26 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { useState } from "react";
-import { createClient } from "@/lib/supabase/client";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
-import { calculateProbability, createInitialPool, executeTrade, type MarketPool } from "@/lib/amm";
-import { useHeroMarket } from "@/lib/use-market";
+import { calculateProbability } from "@/lib/amm";
+import { useMarketData, type SyncedMarket } from "@/lib/use-market";
 
-interface ListMarket {
-  id: string;
-  icon: LucideIcon;
-  category: string;
-  title: string;
-  volume: string;
-  move: string;
-  color: string;
-  closes: string;
-  pool: MarketPool;
+const categoryIcons: Record<string, LucideIcon> = {
+  classes: FlaskConical,
+  campus: CalendarDays,
+  spw: Trophy,
+  sports: Trophy,
+  clubs: Mic2,
+};
+
+function closeLabel(closesAt: string) {
+  return `Closes ${new Date(closesAt).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+  })}`;
 }
-
-const initialGridMarkets: ListMarket[] = [
-  {
-    id: "m1",
-    icon: FlaskConical,
-    category: "Classes",
-    title: "Will the Carel test happen next week?",
-    volume: "18.4k EAG",
-    move: "+7%",
-    color: "#0b84bb",
-    closes: "Closes in 3 days",
-    pool: createInitialPool(1000),
-  },
-  {
-    id: "m2",
-    icon: CalendarDays,
-    category: "Campus",
-    title: "Will CO29 place above 3rd Place at SPW?",
-    volume: "24.9k EAG",
-    move: "+3%",
-    color: "#a264d8",
-    closes: "Closes Apr 18",
-    pool: createInitialPool(1000),
-  },
-  {
-    id: "m3",
-    icon: Mic2,
-    category: "Clubs",
-    title: "Will Buggin Art Mag drop next week?",
-    volume: "8.7k EAG",
-    move: "-2%",
-    color: "#e76d45",
-    closes: "Closes Friday",
-    pool: createInitialPool(1000),
-  },
-  {
-    id: "m4",
-    icon: Trophy,
-    category: "Sports",
-    title: "Will Women's varsity volleyball win Friday's home match?",
-    volume: "12.1k EAG",
-    move: "+5%",
-    color: "#2d9a70",
-    closes: "Closes in 8 hours",
-    pool: createInitialPool(1000),
-  },
-];
-
-const categories = [
-  "Trending",
-  "Classes",
-  "Campus",
-  "SPW",
-  "Sports",
-  "Clubs",
-  "Teachers",
-  "Seniors",
-];
 
 function EagleMark() {
   return (
@@ -111,42 +56,85 @@ function EagleMark() {
   );
 }
 
+type TradeFeedback = {
+  id: number;
+  side: "yes" | "no";
+  amount: number;
+  question: string;
+};
+
+const celebrationParticles = Array.from({ length: 16 }, (_, index) => ({
+  left: 8 + ((index * 29) % 84),
+  delay: (index % 4) * 28,
+  drift: -34 + ((index * 17) % 68),
+  rotation: 120 + ((index * 47) % 240),
+}));
+
+function TradeConfirmation({ feedback }: { feedback: TradeFeedback }) {
+  return (
+    <div className="trade-confirmation" role="status" aria-live="polite">
+      <div className="confirmation-burst" aria-hidden="true">
+        {celebrationParticles.map((particle, index) => (
+          <i
+            key={`${feedback.id}-${index}`}
+            style={
+              {
+                left: `${particle.left}%`,
+                "--particle-delay": `${particle.delay}ms`,
+                "--particle-drift": `${particle.drift}px`,
+                "--particle-rotation": `${particle.rotation}deg`,
+              } as CSSProperties
+            }
+          />
+        ))}
+      </div>
+      <span className="confirmation-check" aria-hidden="true">
+        <Check size={16} strokeWidth={2.5} />
+      </span>
+      <div>
+        <strong>Prediction confirmed</strong>
+        <span>
+          {feedback.amount.toLocaleString()} EAG on {feedback.side.toUpperCase()}
+        </span>
+      </div>
+    </div>
+  );
+}
+
 function MarketCard({
   market,
   onTrade,
 }: {
-  market: ListMarket;
-  onTrade: (id: string, isBuyingYes: boolean) => void;
+  market: SyncedMarket;
+  onTrade: (id: number, isBuyingYes: boolean) => Promise<void>;
 }) {
   const [side, setSide] = useState<"yes" | "no" | null>(null);
-  const Icon = market.icon;
+  const Icon = categoryIcons[market.category.slug] ?? CalendarDays;
   const probYes = Math.round(
-    calculateProbability(market.pool.sharesYes, market.pool.sharesNo) * 100
+    calculateProbability(Number(market.pool_yes), Number(market.pool_no)) * 100
   );
   const probNo = 100 - probYes;
 
   const handleTrade = (chosenSide: "yes" | "no") => {
     setSide(chosenSide);
-    onTrade(market.id, chosenSide === "yes");
+    void onTrade(market.id, chosenSide === "yes");
   };
 
   const card = (
     <article className="market-card">
       <div className="market-card-top">
-        <span className="category-label">{market.category}</span>
-        <button className="watch-button" aria-label={`Watch ${market.title}`}>
+        <span className="category-label">{market.category.name}</span>
+        <button className="watch-button" aria-label={`Watch ${market.question}`}>
           <Bell size={16} />
         </button>
       </div>
-      <h3>{market.title}</h3>
+      <h3>{market.question}</h3>
       <div className="probability-row">
         <div>
           <strong>{probYes}%</strong>
           <span>chance</span>
         </div>
-        <span className={market.move.startsWith("+") ? "move-up" : "move-down"}>
-          {market.move} today
-        </span>
+        <span className="move-up">Live</span>
       </div>
       <div className="trade-row">
         <button
@@ -163,88 +151,109 @@ function MarketCard({
         </button>
       </div>
       <div className="card-foot">
-        <span>{market.volume} traded</span>
+        <span>{Number(market.total_volume).toLocaleString()} EAG traded</span>
         <span>
           <Clock3 size={12} />
-          {market.closes}
+          {closeLabel(market.closes_at)}
         </span>
       </div>
     </article>
   );
   return (
-    <DitherCardFrame icon={Icon} color={market.color}>
+    <DitherCardFrame icon={Icon} color={market.category.color}>
       {card}
     </DitherCardFrame>
   );
 }
 
 export default function Home() {
-  const router = useRouter();
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("Trending");
   const [orderSide, setOrderSide] = useState<"yes" | "no">("yes");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [amountInput, setAmountInput] = useState<string>("10");
-  const [gridMarkets, setGridMarkets] = useState<ListMarket[]>(initialGridMarkets);
+  const [tradeFeedback, setTradeFeedback] = useState<TradeFeedback | null>(null);
+  const feedbackTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const {
+    markets,
     heroMarket,
     probYes,
     probNo,
     userBalance,
     chartData,
+    loading,
+    trading,
+    error,
     preview,
     previewSlippage,
-    trade,
-  } = useHeroMarket();
+    executeTrade,
+  } = useMarketData();
 
   const numericAmount = parseFloat(amountInput) || 0;
   const previewResult = preview(numericAmount, orderSide === "yes");
   const potentialReturn = previewResult ? Math.floor(previewResult.sharesReceived) : 0;
   const priceImpact = previewSlippage(numericAmount, orderSide === "yes");
 
-  const handleHeroTrade = () => {
-    if (numericAmount <= 0) return;
-    trade({ investmentAmount: numericAmount, isBuyingYes: orderSide === "yes" });
+  useEffect(
+    () => () => {
+      if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    },
+    [],
+  );
+
+  const showTradeConfirmation = (
+    side: "yes" | "no",
+    amount: number,
+    question: string,
+  ) => {
+    if (feedbackTimer.current) clearTimeout(feedbackTimer.current);
+    setTradeFeedback({ id: Date.now(), side, amount, question });
+    feedbackTimer.current = setTimeout(() => setTradeFeedback(null), 3600);
   };
 
-  const signOut = async () => {
-    const supabase = createClient();
-    await supabase.auth.signOut();
-    router.push("/");
-    router.refresh();
+  const handleHeroTrade = async () => {
+    if (!heroMarket || numericAmount <= 0) return;
+    setTradeFeedback(null);
+    const succeeded = await executeTrade(heroMarket.id, numericAmount, orderSide);
+    if (succeeded) {
+      showTradeConfirmation(orderSide, numericAmount, heroMarket.question);
+    }
   };
 
-  const handleGridMarketTrade = (id: string, isBuyingYes: boolean) => {
+  const handleGridMarketTrade = async (id: number, isBuyingYes: boolean) => {
     const tradeAmount = 10;
     if (userBalance < tradeAmount) return;
-
-    setGridMarkets((prev) =>
-      prev.map((m) => {
-        if (m.id !== id) return m;
-        const result = executeTrade(
-          {
-            id: m.id,
-            title: m.title,
-            category: m.category,
-            pool: m.pool,
-            totalVolume: 0,
-          },
-          { investmentAmount: tradeAmount, isBuyingYes }
-        );
-        return {
-          ...m,
-          pool: result.updatedPool,
-        };
-      })
-    );
+    const market = markets.find((item) => item.id === id);
+    const side = isBuyingYes ? "yes" : "no";
+    const succeeded = await executeTrade(id, tradeAmount, side);
+    if (succeeded && market) showTradeConfirmation(side, tradeAmount, market.question);
   };
 
-  const visibleMarkets = gridMarkets.filter(
+  const categories = [
+    "Trending",
+    ...Array.from(new Set(markets.map((market) => market.category.name))),
+  ];
+
+  const categoryMarkets = activeCategory === "Trending" ? markets.slice(1) : markets;
+  const visibleMarkets = categoryMarkets.filter(
     (market) =>
-      market.title.toLowerCase().includes(query.toLowerCase()) &&
-      (activeCategory === "Trending" || market.category === activeCategory)
+      market.question.toLowerCase().includes(query.toLowerCase()) &&
+      (activeCategory === "Trending" || market.category.name === activeCategory)
   );
+
+  if (loading) {
+    return <main className="sync-state">Loading EagleMarket…</main>;
+  }
+
+  if (!heroMarket) {
+    return (
+      <main className="sync-state">
+        <strong>No markets are available.</strong>
+        <span>{error ?? "Ask an administrator to publish the first market."}</span>
+      </main>
+    );
+  }
 
   return (
     <div className="app-shell">
@@ -254,11 +263,11 @@ export default function Home() {
           <span>EagleMarket</span>
         </Link>
         <nav className="primary-nav" aria-label="Primary navigation">
-          <a className="active" href="#markets">
+          <Link className="active" href="/markets">
             Markets
-          </a>
-          <a href="#portfolio">My picks</a>
-          <a href="#rankings">Rankings</a>
+          </Link>
+          <Link href="/picks">My picks</Link>
+          <Link href="/rankings">Rankings</Link>
         </nav>
         <label className="search-box">
           <Search size={18} />
@@ -273,7 +282,7 @@ export default function Home() {
           <button className="token-balance">
             <EagCoin size="sm" /> {userBalance.toLocaleString()} EAG
           </button>
-          <button className="signup" onClick={signOut}>Log out</button>
+          <Link className="signup" href="/settings">Settings</Link>
         </div>
         <button
           className="mobile-menu"
@@ -287,9 +296,9 @@ export default function Home() {
       {mobileOpen && (
         <nav className="mobile-nav">
           <a href="#markets">Markets</a>
-          <a href="#live">Live</a>
-          <a href="#portfolio">My picks</a>
-          <button onClick={signOut}>Log out</button>
+          <Link href="/rankings">Rankings</Link>
+          <Link href="/picks">My picks</Link>
+          <Link className="mobile-settings-link" href="/settings">Settings</Link>
         </nav>
       )}
 
@@ -308,12 +317,13 @@ export default function Home() {
       </div>
 
       <main>
+        {error && <div className="sync-error" role="alert">{error}</div>}
+        {activeCategory === "Trending" && (
         <section className="hero-market" id="markets">
           <div className="hero-copy">
-            <h1>Will the next Chem Honors Liu test average be above 82%?</h1>
+            <h1>{heroMarket.question}</h1>
             <p className="hero-description">
-              Resolves Yes if the official class average posted by Ms. Liu is
-              82.1% or higher. Retakes are not included.
+              {heroMarket.resolution_criteria}
             </p>
 
             <div className="outcome-summary">
@@ -334,14 +344,14 @@ export default function Home() {
             </div>
             <div className="market-stats">
               <span>
-                <strong>{heroMarket.totalVolume.toLocaleString()} EAG</strong> volume
+                <strong>{Number(heroMarket.total_volume).toLocaleString()} EAG</strong> volume
               </span>
               <span>
-                <strong>286</strong> predictors
+                <strong>{heroMarket.status}</strong> market
               </span>
               <span>
                 <Clock3 size={15} />
-                <strong>3 days</strong> left
+                <strong>{closeLabel(heroMarket.closes_at)}</strong>
               </span>
             </div>
           </div>
@@ -453,7 +463,7 @@ export default function Home() {
                 No <span>{probNo}c</span>
               </button>
             </div>
-            <label className="amount-label">Play tokens</label>
+            <label className="amount-label">Tokens</label>
             <div className="amount-input">
               <EagCoin size="sm" />
               <input
@@ -484,18 +494,31 @@ export default function Home() {
               </div>
             )}
             <button
-              className="review-button"
+              className={`review-button${tradeFeedback?.question === heroMarket.question ? " confirmed" : ""}`}
               onClick={handleHeroTrade}
-              disabled={numericAmount <= 0 || numericAmount > userBalance}
+              disabled={trading || numericAmount <= 0 || numericAmount > userBalance}
             >
-              Confirm prediction <ArrowRight size={17} />
+              {trading ? (
+                <>
+                  <LoaderCircle className="trade-spinner" size={17} /> Confirming…
+                </>
+              ) : tradeFeedback?.question === heroMarket.question ? (
+                <>
+                  <Check size={17} /> Prediction confirmed
+                </>
+              ) : (
+                <>
+                  Confirm prediction <ArrowRight size={17} />
+                </>
+              )}
             </button>
             <p>
-              EAG are free play tokens with no cash value. Correct picks settle at
+              EAG are free tokens with no cash value. Correct picks settle at
               100 EAG per contract.
             </p>
           </aside>
         </section>
+        )}
 
         <section className="market-section mt-12">
           <div className="section-heading">
@@ -522,6 +545,7 @@ export default function Home() {
           </div>
         </section>
       </main>
+      {tradeFeedback && <TradeConfirmation key={tradeFeedback.id} feedback={tradeFeedback} />}
     </div>
   );
 }

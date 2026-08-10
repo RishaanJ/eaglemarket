@@ -1,24 +1,17 @@
 "use client";
 
-import { useState } from "react";
-import type { LucideIcon } from "lucide-react";
-import {
-  calculateProbability,
-  calculatePurchaseOutput,
-  calculateSlippage,
-  createInitialPool,
-  executeTrade,
-  type MarketPool,
-  type MarketState,
-  type TradeDetails,
-  type TradeResult,
-} from "./amm";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { calculateProbability, calculatePurchaseOutput, calculateSlippage } from "./amm";
+import { createClient } from "./supabase/client";
+import type { Tables } from "./database.types";
 
-export interface MarketItem extends MarketState {
-  icon: LucideIcon;
-  color: string;
-  closes: string;
-  move: string;
+type MarketRow = Tables<"markets">;
+type CategoryRow = Tables<"categories">;
+type WalletRow = Tables<"wallets">;
+type PriceHistoryRow = Tables<"market_price_history">;
+
+export interface SyncedMarket extends MarketRow {
+  category: Pick<CategoryRow, "name" | "slug" | "color" | "icon_key">;
 }
 
 export interface ChartDataPoint {
@@ -27,89 +20,266 @@ export interface ChartDataPoint {
   no: number;
 }
 
-const initialHeroPool: MarketPool = createInitialPool(1000);
+interface MarketWithCategory extends MarketRow {
+  categories: Pick<CategoryRow, "name" | "slug" | "color" | "icon_key">;
+}
 
-const initialHeroState: MarketState = {
-  id: "hero-chem",
-  title: "Will the next Chem Honors Liu test average be above 82%?",
-  category: "Classes",
-  pool: initialHeroPool,
-  totalVolume: 18400,
-};
+export function useMarketData() {
+  const supabase = useMemo(() => createClient(), []);
+  const [markets, setMarkets] = useState<SyncedMarket[]>([]);
+  const [userBalance, setUserBalance] = useState(0);
+  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [trading, setTrading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const pendingTrade = useRef<{ fingerprint: string; key: string } | null>(null);
+  const heroMarketId = markets[0]?.id;
 
-const defaultChartData: ChartDataPoint[] = [
-  { day: "Jul 14", yes: 50, no: 50 },
-  { day: "Jul 18", yes: 50, no: 50 },
-  { day: "Jul 22", yes: 50, no: 50 },
-  { day: "Jul 26", yes: 50, no: 50 },
-  { day: "Jul 30", yes: 50, no: 50 },
-  { day: "Aug 3", yes: 50, no: 50 },
-  { day: "Aug 6", yes: 50, no: 50 },
-  { day: "Aug 10", yes: 50, no: 50 },
-];
+  const load = useCallback(async () => {
+    setError(null);
 
-export function useHeroMarket() {
-  const [heroMarket, setHeroMarket] = useState<MarketState>(initialHeroState);
-  const [chartData, setChartData] = useState<ChartDataPoint[]>(defaultChartData);
-  const [userBalance, setUserBalance] = useState<number>(2450);
+    const { data: authData, error: authError } = await supabase.auth.getUser();
+    if (authError || !authData.user) {
+      setError("Your session has expired. Please log in again.");
+      setLoading(false);
+      return;
+    }
+    setUserId(authData.user.id);
 
-  const probYes = Math.round(calculateProbability(heroMarket.pool.sharesYes, heroMarket.pool.sharesNo) * 100);
+    const [walletResult, marketsResult] = await Promise.all([
+      supabase.from("wallets").select("balance").eq("user_id", authData.user.id).single(),
+      supabase
+        .from("markets")
+        .select("*, categories!inner(name, slug, color, icon_key)")
+        .order("created_at", { ascending: true }),
+    ]);
+
+    if (walletResult.error) {
+      setError(walletResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    if (marketsResult.error) {
+      setError(marketsResult.error.message);
+      setLoading(false);
+      return;
+    }
+
+    const syncedMarkets = (marketsResult.data as MarketWithCategory[]).map(
+      ({ categories, ...market }) => ({ ...market, category: categories }),
+    );
+
+    setUserBalance(Number(walletResult.data.balance));
+    setMarkets(syncedMarkets);
+
+    const hero = syncedMarkets[0];
+    if (hero) {
+      const { data: history, error: historyError } = await supabase
+        .from("market_price_history")
+        .select("created_at, probability_yes")
+        .eq("market_id", hero.id)
+        .order("created_at", { ascending: true })
+        .limit(100);
+
+      if (historyError) {
+        setError(historyError.message);
+      } else {
+        const initialYes = Math.round(
+          calculateProbability(Number(hero.pool_yes), Number(hero.pool_no)) * 100,
+        );
+        const points: ChartDataPoint[] = [
+          {
+            day: new Date(hero.opens_at).toLocaleDateString(undefined, {
+              month: "short",
+              day: "numeric",
+            }),
+            yes: history?.length ? 50 : initialYes,
+            no: history?.length ? 50 : 100 - initialYes,
+          },
+          ...(history ?? []).map((point) => {
+            const yes = Math.round(Number(point.probability_yes) * 100);
+            return {
+              day: new Date(point.created_at).toLocaleDateString(undefined, {
+                month: "short",
+                day: "numeric",
+              }),
+              yes,
+              no: 100 - yes,
+            };
+          }),
+        ];
+        setChartData(points);
+      }
+    }
+
+    setLoading(false);
+  }, [supabase]);
+
+  useEffect(() => {
+    queueMicrotask(() => void load());
+  }, [load]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const channel = supabase
+      .channel(`eaglemarket-sync-${userId}`)
+      .on(
+        "postgres_changes",
+        { event: "UPDATE", schema: "public", table: "markets" },
+        (payload) => {
+          const updated = payload.new as MarketRow;
+          setMarkets((current) =>
+            current.map((market) =>
+              market.id === updated.id
+                ? { ...market, ...updated, category: market.category }
+                : market,
+            ),
+          );
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "wallets",
+          filter: `user_id=eq.${userId}`,
+        },
+        (payload) => {
+          const updated = payload.new as WalletRow;
+          if (updated.user_id === userId) setUserBalance(Number(updated.balance));
+        },
+      )
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "market_price_history" },
+        (payload) => {
+          const point = payload.new as PriceHistoryRow;
+          if (point.market_id !== heroMarketId) return;
+          const yes = Math.round(Number(point.probability_yes) * 100);
+          const nextPoint = {
+            day: new Date(point.created_at).toLocaleDateString(undefined, {
+              month: "short" as const,
+              day: "numeric" as const,
+            }),
+            yes,
+            no: 100 - yes,
+          };
+          setChartData((current) => [...current.slice(-99), nextPoint]);
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [heroMarketId, supabase, userId]);
+
+  const executeTrade = useCallback(
+    async (marketId: number, amount: number, outcome: "yes" | "no") => {
+      setTrading(true);
+      setError(null);
+      const fingerprint = `${marketId}:${amount}:${outcome}`;
+      const idempotencyKey =
+        pendingTrade.current?.fingerprint === fingerprint
+          ? pendingTrade.current.key
+          : crypto.randomUUID();
+      pendingTrade.current = { fingerprint, key: idempotencyKey };
+      try {
+        const response = await fetch("/api/trades", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            marketId,
+            amount,
+            outcome,
+            idempotencyKey,
+          }),
+        });
+        const result = (await response.json()) as {
+          error?: string;
+          balance?: number;
+          market_id?: number;
+          pool_yes?: number;
+          pool_no?: number;
+          total_volume?: number;
+        };
+
+        if (!response.ok) {
+          if (response.status < 500) pendingTrade.current = null;
+          setError(result.error ?? "The trade could not be completed.");
+          return false;
+        }
+
+        pendingTrade.current = null;
+        setUserBalance(Number(result.balance));
+        setMarkets((current) =>
+          current.map((market) =>
+            market.id === result.market_id
+              ? {
+                  ...market,
+                  pool_yes: Number(result.pool_yes),
+                  pool_no: Number(result.pool_no),
+                  total_volume: Number(result.total_volume),
+                }
+              : market,
+          ),
+        );
+        return true;
+      } catch {
+        setError("The network request failed. Your balance was not changed twice; try again safely.");
+        return false;
+      } finally {
+        setTrading(false);
+      }
+    },
+    [],
+  );
+
+  const heroMarket = markets[0] ?? null;
+  const probYes = heroMarket
+    ? Math.round(
+        calculateProbability(Number(heroMarket.pool_yes), Number(heroMarket.pool_no)) * 100,
+      )
+    : 50;
   const probNo = 100 - probYes;
 
   const preview = (amount: number, isBuyingYes: boolean) => {
-    if (amount <= 0) return null;
+    if (!heroMarket || amount <= 0) return null;
     return calculatePurchaseOutput(
       amount,
-      heroMarket.pool.sharesYes,
-      heroMarket.pool.sharesNo,
-      isBuyingYes
+      Number(heroMarket.pool_yes),
+      Number(heroMarket.pool_no),
+      isBuyingYes,
     );
   };
 
   const previewSlippage = (amount: number, isBuyingYes: boolean) => {
+    if (!heroMarket) return 0;
     return calculateSlippage(
       amount,
-      heroMarket.pool.sharesYes,
-      heroMarket.pool.sharesNo,
-      isBuyingYes
+      Number(heroMarket.pool_yes),
+      Number(heroMarket.pool_no),
+      isBuyingYes,
     );
   };
 
-  const trade = (details: TradeDetails): TradeResult | null => {
-    if (details.investmentAmount <= 0 || details.investmentAmount > userBalance) {
-      return null;
-    }
-
-    const result = executeTrade(heroMarket, details);
-
-    setHeroMarket((prev) => ({
-      ...prev,
-      pool: result.updatedPool,
-      totalVolume: Math.round(prev.totalVolume + details.investmentAmount),
-    }));
-
-    setUserBalance((prev) => prev - details.investmentAmount);
-
-    const newYesPct = Math.round(result.newProbabilityYes * 100);
-    const newNoPct = 100 - newYesPct;
-
-    const todayStr = "Today";
-    setChartData((prev) => [
-      ...prev,
-      { day: todayStr, yes: newYesPct, no: newNoPct },
-    ]);
-
-    return result;
-  };
-
   return {
+    markets,
     heroMarket,
     probYes,
     probNo,
     userBalance,
     chartData,
+    loading,
+    trading,
+    error,
     preview,
     previewSlippage,
-    trade,
+    executeTrade,
+    refresh: load,
   };
 }

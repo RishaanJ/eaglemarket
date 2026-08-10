@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarDays, Check, ChevronRight, FlaskConical, Trophy } from "lucide-react";
+import { ArrowRight, ArrowUpRight, CalendarDays, Check, ChevronRight, FlaskConical, Trophy } from "lucide-react";
 import Link from "next/link";
 import { BentoGrid } from "@/components/ui/bento-grid";
 import { LineShadowText } from "@/components/ui/line-shadow-text"
@@ -8,6 +8,7 @@ import { EagCoin } from "@/components/ui/eag-coin";
 import { GridPattern } from "@/components/ui/grid-pattern";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { Marquee } from "@/components/ui/marquee";
+import { NoiseBars } from "@/components/ui/noise-bars";
 import styles from "./landing.module.css";
 
 const topics = ["AP Chemistry", "Friday football", "SPW", "Senior class", "Clubs", "Campus events"];
@@ -30,7 +31,7 @@ export default function LandingPage() {
       <section className={styles.hero}>
         <GridPattern width={38} height={38} className={styles.heroGrid} />
         <h1>The market for <LineShadowText className="italic">everything</LineShadowText> AHS.</h1>
-        <p>Make predictions on tests, games, SPW, and the things everyone is already talking about. No money—just EAG and bragging rights.</p>
+        <p>Predict tests, games, SPW, and everything else happening at AHS. Make your picks, earn EAG, and see if you called it first.</p>
         <div className={styles.heroActions}>
           <Link className={styles.primaryCta} href="/markets">Claim your free EAG <ArrowRight size={16} /></Link>
           <a className={styles.secondaryCta} href="#how">How it works</a>
@@ -74,12 +75,38 @@ export default function LandingPage() {
       </section>
 
       <section className={styles.how} id="how">
-        <div className={styles.sectionHeading}><div><span>HOW IT WORKS</span><h2>One question. Two sides.</h2></div></div>
-        <div className={styles.steps}>
-          <article><span>01</span><div><h3>Find a market</h3><p>Pick a question about school that you think you can call.</p></div></article>
-          <article><span>02</span><div><h3>Take a side</h3><p>Use free EAG tokens to choose Yes or No.</p></div></article>
-          <article><span>03</span><div><h3>Get the result</h3><p>Markets resolve from a clear, official school source.</p></div></article>
-        </div>
+        <div className={styles.sectionHeading}><div><span>HOW IT WORKS</span><h2>Pick a side. See if you called it.</h2></div></div>
+        <p className={styles.howLead}>Every market starts with a simple question about AHS. Pick Yes or No, put your EAG behind it, and when the answer is settled, see if your call paid off.</p>
+        <ol className={styles.steps}>
+          <li>
+            <div className={styles.stepHead}><span>01</span><h3>Pick a market</h3></div>
+            <p>Find something happening at AHS and make your call. The percentage shows what the school thinks right now.</p>
+            <div className={styles.stepCard}>
+              <span className={styles.stepCat}>ATHLETICS</span>
+              <strong>Will AHS win Friday&apos;s home game?</strong>
+              <div className={styles.stepOdds}><b>71%</b><span>chance</span></div>
+              <div className={styles.miniBar}><i style={{ width: "71%", background: "#1498cf" }} /></div>
+            </div>
+          </li>
+          <li>
+            <div className={styles.stepHead}><span>02</span><h3>Take a side</h3></div>
+            <p>Yes or No. Put your EAG behind your call, the less likely your pick is, the bigger the potential payoff.</p>
+            <div className={styles.stepCard}>
+              <div className={styles.sideRow}><span className={styles.sideYes}>Yes<b>0.71</b></span><span className={styles.sideNo}>No<b>0.29</b></span></div>
+              <div className={styles.stakeRow}><span>You stake</span><strong>50 EAG</strong></div>
+              <div className={styles.stakeRow}><span>You receive</span><strong>69.73 shares</strong></div>
+            </div>
+          </li>
+          <li>
+            <div className={styles.stepHead}><span>03</span><h3>Collect</h3></div>
+            <p>When the result is official the market resolves. Every winning share pays exactly 1 EAG; losing shares expire at zero.</p>
+            <div className={styles.stepCard}>
+              <span className={styles.resolved}><Check size={11} strokeWidth={2.5} /> RESOLVED YES</span>
+              <div className={styles.payout}><strong>69.73 EAG</strong><span>+19.73 on the 50 you staked</span></div>
+            </div>
+          </li>
+        </ol>
+        <p className={styles.howNote}><span>PRICING</span>Prices are set by a constant product market maker: a decentralized finance pricing formula that eliminates the need for traditional buyer-and-seller order books and automatically adjusts token prices based on trade sizes and liquidity pool ratios.</p>
       </section>
 
       <section className={styles.tokenCard}>
@@ -88,7 +115,16 @@ export default function LandingPage() {
         <Link href="/markets">Start with free EAG <ArrowRight size={15} /></Link>
       </section>
 
-      <footer className={styles.footer}><span>© 2026 EagleMarket</span><span>Built for AHS</span><Link href="/markets">Enter app ↗</Link></footer>
+      <footer className={styles.footer}>
+        <div className={styles.footerInner}>
+          <div className={styles.footerMeta}>
+            <span>©2026 Copyright EagleMarket. Built for AHS. All rights reserved</span>
+            <nav><a href="#markets">Markets</a><a href="#how">How it works</a><Link href="/markets">Enter app <ArrowUpRight size={14} strokeWidth={1.75} /></Link></nav>
+          </div>
+          <p className={styles.credit}>Brought to you by <span className={styles.jainStreet} role="img" aria-label="Jain Street" /></p>
+        </div>
+        <NoiseBars className={styles.footerChart} />
+      </footer>
     </main>
   );
 }

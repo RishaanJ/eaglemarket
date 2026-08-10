@@ -35,6 +35,11 @@ yarn-error.log*
 .env.*
 !.env.example
 !.env.*.example
+.envrc
+.direnv/
+.dev.vars
+.dev.vars.*
+!.dev.vars.example
 
 # OAuth, cloud-provider, and service-account credentials
 client_secret_*.json
@@ -66,8 +71,16 @@ firebase-adminsdk-*.json
 !/supabase/.env.example
 
 # local MCP configuration may contain access tokens
+.mcp.json
 .mcp.local.json
 .mcp.json.local
+mcp.json
+!mcp.example.json
+!.mcp.example.json
+
+# local agent settings
+/.claude/settings.local.json
+/.codex/settings.local.json
 
 # vercel
 .vercel
@@ -75,3 +88,11 @@ firebase-adminsdk-*.json
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# local tooling and test output
+.cache/
+.turbo/
+.eslintcache
+*.log
+/playwright-report/
+/test-results/
