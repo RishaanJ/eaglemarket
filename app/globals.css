@@ -546,6 +546,40 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
 .auth-actions .icon-button.settings-active { border-color: transparent; background: var(--primary-dark); color: white; }
 .auth-actions .icon-button.settings-active:hover { background: oklch(0.43 0.17 230); }
 
+/* Notification center */
+.notification-center { position: relative; }
+.auth-actions .notification-trigger { position: relative; padding: 0; }
+.notification-count { position: absolute; top: -4px; right: -4px; min-width: 17px; height: 17px; padding: 0 4px; display: grid; place-items: center; border: 2px solid white; border-radius: 999px; background: var(--ink); color: white; font-size: 8px; font-weight: 700; line-height: 1; }
+.notification-panel { position: absolute; z-index: 90; top: calc(100% + 12px); right: 0; width: min(382px, calc(100vw - 28px)); overflow: hidden; border: 1px solid var(--border); border-radius: 18px; background: white; color: var(--ink); box-shadow: 0 18px 48px -28px oklch(0.2 0.02 240 / .32), 0 3px 12px oklch(0.2 0.02 240 / .05); }
+.notification-panel-header { min-height: 66px; padding: 0 18px; display: flex; align-items: center; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--border); }
+.notification-panel-header h2 { margin: 0; font-size: 17px; font-weight: 620; letter-spacing: -.035em; }
+.auth-actions .notification-panel-header button { width: auto; height: auto; padding: 5px 0; border: 0; border-radius: 0; background: transparent; color: var(--muted); font-size: 11px; font-weight: 560; }
+.auth-actions .notification-panel-header button:hover { color: var(--ink); }
+.notification-list { max-height: min(442px, calc(100vh - 190px)); padding: 8px; display: flex; flex-direction: column; gap: 6px; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: none; }
+.notification-list::-webkit-scrollbar { display: none; }
+.notification-item { position: relative; min-height: 84px; padding: 14px 22px 14px 14px; border: 1px solid var(--border); border-radius: 12px; background: white; box-shadow: 0 2px 8px oklch(0.2 0.02 240 / .035); }
+.notification-item.unread { border-color: oklch(0.83 0.018 240); }
+.notification-item-copy { min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 5px; }
+.notification-item-copy > div { width: 100%; display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+.notification-item-copy strong { overflow: hidden; font-size: 12px; font-weight: 620; letter-spacing: -.01em; text-overflow: ellipsis; white-space: nowrap; }
+.notification-item-copy time { flex: 0 0 auto; color: oklch(0.62 0.01 240); font-size: 10px; }
+.notification-item-copy p { width: 100%; margin: 0; overflow: hidden; color: var(--muted); font-size: 11px; line-height: 1.45; text-overflow: ellipsis; white-space: nowrap; }
+.notification-item-copy > span { font-size: 10.5px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.notification-item-copy .positive { color: oklch(0.43 0.14 153); }
+.notification-item-copy .negative { color: var(--muted); }
+.notification-unread-dot { position: absolute; top: 18px; right: 12px; width: 5px; height: 5px; border-radius: 50%; background: var(--ink); }
+.notification-skeleton { height: 84px; padding: 17px 14px; display: flex; border: 1px solid var(--border); border-radius: 12px; }
+.notification-skeleton > i { display: none; }
+.notification-skeleton > span { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.notification-skeleton b { width: 48%; height: 8px; border-radius: 999px; background: var(--surface); animation: skeleton-pulse 1.5s ease-in-out infinite; }
+.notification-skeleton b:last-child { width: 82%; }
+.notification-empty { min-height: 210px; padding: 42px 30px; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+.notification-empty strong { font-size: 13px; font-weight: 620; }
+.notification-empty p { max-width: 235px; margin: 6px 0 0; color: var(--muted); font-size: 11px; line-height: 1.5; }
+.notification-panel-footer { padding: 12px 16px; border-top: 1px solid var(--border); background: white; text-align: center; }
+.auth-actions .notification-panel-footer a { height: auto; padding: 3px; color: var(--ink); font-size: 11px; font-weight: 580; }
+.auth-actions .notification-panel-footer a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
 /* Admin market operations */
 .admin-shell { font-family: var(--font-geist-sans), system-ui, sans-serif; }
 .admin-main { max-width: 1320px; padding-top: 44px; }
@@ -725,8 +759,9 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
 @media (max-width: 760px) {
   .topbar { height: 62px; padding: 0 18px; gap: 12px; }
   .wordmark { font-size: 18px; } .brand-mark { transform: scale(.88); }
-  .search-box { margin-left: auto; width: 40px; padding: 0; justify-content: center; background: transparent; }
-  .search-box input, .search-box kbd, .auth-actions { display: none; }
+  .search-box, .auth-actions .token-balance, .auth-actions > .icon-button { display: none; }
+  .auth-actions { margin-left: auto; }
+  .notification-panel { position: fixed; top: 70px; right: 14px; }
   .mobile-menu { display: grid; place-items: center; border: 0; background: transparent; color: var(--ink); }
   .mobile-nav { display: flex; padding: 12px 18px; gap: 18px; align-items: center; border-bottom: 1px solid var(--border); }
   .mobile-nav a { color: var(--muted); text-decoration: none; font-size: 13px; }

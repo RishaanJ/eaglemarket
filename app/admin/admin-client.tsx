@@ -19,6 +19,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import { createClient } from "@/lib/supabase/client";
+import { NotificationPanel } from "@/components/notification-panel";
 
 export type AdminCategory = { id: number; name: string; color: string };
 
@@ -215,6 +216,7 @@ export default function AdminClient({
         </label>
         <div className="auth-actions">
           <button className="token-balance"><EagCoin size="sm" /> {balance.toLocaleString()} EAG</button>
+          <NotificationPanel />
           <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button className="mobile-menu" onClick={() => setMobileOpen((open) => !open)} aria-label="Toggle menu"><Menu /></button>

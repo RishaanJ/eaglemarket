@@ -6,6 +6,7 @@ import { useMemo, useState } from "react";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { MotionReveal } from "@/components/ui/motion-reveal";
+import { NotificationPanel } from "@/components/notification-panel";
 
 export type RankingEntry = {
   rank: number;
@@ -87,6 +88,7 @@ export default function RankingsClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
+          <NotificationPanel />
           <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button

@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { EagCoin } from "@/components/ui/eag-coin";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
+import { NotificationPanel } from "@/components/notification-panel";
 import {
   getUsernameFormatError,
   normalizeUsername,
@@ -135,6 +136,7 @@ export default function SettingsClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
+          <NotificationPanel />
           <Link className="icon-button settings-active" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button

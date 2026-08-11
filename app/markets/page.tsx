@@ -32,6 +32,7 @@ import { AppLoadingSkeleton } from "@/components/ui/app-loading-skeleton";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { MotionReveal } from "@/components/ui/motion-reveal";
+import { NotificationPanel } from "@/components/notification-panel";
 import { calculateProbability } from "@/lib/amm";
 import { useMarketData, type SyncedMarket } from "@/lib/use-market";
 
@@ -296,6 +297,7 @@ export default function Home() {
           <button className="token-balance">
             <EagCoin size="sm" /> {userBalance.toLocaleString()} EAG
           </button>
+          <NotificationPanel />
           <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button

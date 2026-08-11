@@ -25,6 +25,7 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart";
 import { PortfolioGrainGradient } from "@/components/ui/portfolio-grain-gradient";
+import { NotificationPanel } from "@/components/notification-panel";
 
 const positionChartConfig = {
   yes: { label: "Yes", color: "oklch(0.58 0.18 255)" },
@@ -165,6 +166,7 @@ export default function PicksClient({
           <button className="token-balance">
             <EagCoin size="sm" /> {balance.toLocaleString()} EAG
           </button>
+          <NotificationPanel />
           <Link className="icon-button" href="/settings" aria-label="Settings"><Settings size={18} /></Link>
         </div>
         <button
