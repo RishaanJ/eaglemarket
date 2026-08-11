@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { checkSameOrigin } from "@/lib/security/same-origin";
 import { createClient } from "@/lib/supabase/server";
 
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
@@ -49,20 +50,9 @@ async function readBoundedJson(request: NextRequest): Promise<TradeRequest> {
 }
 
 export async function POST(request: NextRequest) {
-  const fetchSite = request.headers.get("sec-fetch-site");
-  if (fetchSite && fetchSite !== "same-origin" && fetchSite !== "none") {
-    return errorResponse("Cross-site trade requests are not allowed.", 403);
-  }
-
-  const origin = request.headers.get("origin");
-  if (origin) {
-    try {
-      if (new URL(origin).origin !== request.nextUrl.origin) {
-        return errorResponse("Cross-origin trade requests are not allowed.", 403);
-      }
-    } catch {
-      return errorResponse("Invalid request origin.", 403);
-    }
+  const originFailure = checkSameOrigin(request);
+  if (originFailure) {
+    return errorResponse(originFailure.message, originFailure.status);
   }
 
   const mediaType = request.headers.get("content-type")?.split(";", 1)[0]?.trim().toLowerCase();
