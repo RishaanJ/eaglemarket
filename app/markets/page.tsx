@@ -15,32 +15,92 @@ import {
   CalendarDays,
   ChevronDown,
   Clock3,
+  Flag,
   FlaskConical,
+  Footprints,
+  Lock,
   Menu,
   Mic2,
   Search,
+  Thermometer,
   Trophy,
+  Waves,
 } from "lucide-react";
 import Link from "next/link";
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
-import { calculateProbability, createInitialPool, executeTrade, type MarketPool } from "@/lib/amm";
+import {
+  calculateProbability,
+  createInitialPool,
+  executeTrade,
+  type MarketPool,
+} from "@/lib/amm";
 import { useHeroMarket } from "@/lib/use-market";
+import {
+  getAllFallMarkets,
+  type ExtendedMarket,
+  type MarketStatus,
+} from "@/lib/markets-data";
 
+// ---------------------------------------------------------------------------
+// Icon resolver: maps string icon names from market data to lucide components
+// ---------------------------------------------------------------------------
+const ICON_MAP: Record<string, any> = {
+  Trophy,
+  Flag,
+  Footprints,
+  Waves,
+  Thermometer,
+  FlaskConical,
+  CalendarDays,
+  Mic2,
+};
+
+function resolveIcon(iconName: string) {
+  return ICON_MAP[iconName] || Trophy;
+}
+
+// ---------------------------------------------------------------------------
+// ListMarket now carries a status field for locked-state enforcement
+// ---------------------------------------------------------------------------
 interface ListMarket {
   id: string;
   icon: any;
   category: string;
+  subcategory?: string;
   title: string;
   volume: string;
   move: string;
   color: string;
   closes: string;
   pool: MarketPool;
+  status: MarketStatus;
 }
 
-const initialGridMarkets: ListMarket[] = [
+// ---------------------------------------------------------------------------
+// Convert ExtendedMarket to the ListMarket shape used by the grid
+// ---------------------------------------------------------------------------
+function extendedToListMarket(m: ExtendedMarket): ListMarket {
+  return {
+    id: m.id,
+    icon: resolveIcon(m.icon),
+    category: m.category,
+    subcategory: m.subcategory,
+    title: m.title,
+    volume: m.totalVolume > 0 ? `${(m.totalVolume / 1000).toFixed(1)}k EAG` : "0 EAG",
+    move: "--",
+    color: m.color,
+    closes: m.closes,
+    pool: m.pool,
+    status: m.status,
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Original "core" markets (existing ones from before)
+// ---------------------------------------------------------------------------
+const coreMarkets: ListMarket[] = [
   {
     id: "m1",
     icon: FlaskConical,
@@ -51,6 +111,7 @@ const initialGridMarkets: ListMarket[] = [
     color: "#0b84bb",
     closes: "Closes in 3 days",
     pool: createInitialPool(1000),
+    status: "OPEN",
   },
   {
     id: "m2",
@@ -62,6 +123,7 @@ const initialGridMarkets: ListMarket[] = [
     color: "#a264d8",
     closes: "Closes Apr 18",
     pool: createInitialPool(1000),
+    status: "OPEN",
   },
   {
     id: "m3",
@@ -73,6 +135,7 @@ const initialGridMarkets: ListMarket[] = [
     color: "#e76d45",
     closes: "Closes Friday",
     pool: createInitialPool(1000),
+    status: "OPEN",
   },
   {
     id: "m4",
@@ -84,9 +147,13 @@ const initialGridMarkets: ListMarket[] = [
     color: "#2d9a70",
     closes: "Closes in 8 hours",
     pool: createInitialPool(1000),
+    status: "OPEN",
   },
 ];
 
+// ---------------------------------------------------------------------------
+// Categories (expanded with Weather)
+// ---------------------------------------------------------------------------
 const categories = [
   "Trending",
   "Classes",
@@ -96,7 +163,27 @@ const categories = [
   "Clubs",
   "Teachers",
   "Seniors",
+  "Weather",
 ];
+
+// ---------------------------------------------------------------------------
+// Sub-categories for sports filtering
+// ---------------------------------------------------------------------------
+const sportSubcategories = [
+  "All Sports",
+  "Football",
+  "Girls Flag Football",
+  "Cross Country",
+  "Girls Volleyball",
+  "Girls Tennis",
+  "Girls Golf",
+  "Boys Water Polo",
+  "Girls Water Polo",
+];
+
+// ---------------------------------------------------------------------------
+// Components
+// ---------------------------------------------------------------------------
 
 function EagleMark() {
   return (
@@ -105,6 +192,21 @@ function EagleMark() {
       <span />
       <span />
     </div>
+  );
+}
+
+function LockedBadge() {
+  return (
+    <span
+      className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full"
+      style={{
+        background: "oklch(0.92 0.02 240)",
+        color: "oklch(0.45 0.03 240)",
+      }}
+    >
+      <Lock size={10} />
+      Locked
+    </span>
   );
 }
 
@@ -117,23 +219,30 @@ function MarketCard({
 }) {
   const [side, setSide] = useState<"yes" | "no" | null>(null);
   const Icon = market.icon;
+  const isLocked = market.status === "LOCKED";
   const probYes = Math.round(
     calculateProbability(market.pool.sharesYes, market.pool.sharesNo) * 100
   );
   const probNo = 100 - probYes;
 
   const handleTrade = (chosenSide: "yes" | "no") => {
+    if (isLocked) return;
     setSide(chosenSide);
     onTrade(market.id, chosenSide === "yes");
   };
 
   const card = (
-    <article className="market-card">
+    <article className={`market-card${isLocked ? " market-card-locked" : ""}`}>
       <div className="market-card-top">
-        <span className="category-label">{market.category}</span>
-        <button className="watch-button" aria-label={`Watch ${market.title}`}>
-          <Bell size={16} />
-        </button>
+        <span className="category-label">
+          {market.subcategory || market.category}
+        </span>
+        <div className="flex items-center gap-2">
+          {isLocked && <LockedBadge />}
+          <button className="watch-button" aria-label={`Watch ${market.title}`}>
+            <Bell size={16} />
+          </button>
+        </div>
       </div>
       <h3>{market.title}</h3>
       <div className="probability-row">
@@ -141,20 +250,26 @@ function MarketCard({
           <strong>{probYes}%</strong>
           <span>chance</span>
         </div>
-        <span className={market.move.startsWith("+") ? "move-up" : "move-down"}>
-          {market.move} today
-        </span>
+        {!isLocked && (
+          <span className={market.move.startsWith("+") ? "move-up" : "move-down"}>
+            {market.move} today
+          </span>
+        )}
       </div>
       <div className="trade-row">
         <button
           className={side === "yes" ? "yes selected" : "yes"}
           onClick={() => handleTrade("yes")}
+          disabled={isLocked}
+          title={isLocked ? "This market is locked and not yet open for trading" : undefined}
         >
           Yes <span>{probYes}c</span>
         </button>
         <button
           className={side === "no" ? "no selected" : "no"}
           onClick={() => handleTrade("no")}
+          disabled={isLocked}
+          title={isLocked ? "This market is locked and not yet open for trading" : undefined}
         >
           No <span>{probNo}c</span>
         </button>
@@ -175,13 +290,24 @@ function MarketCard({
   );
 }
 
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
 export default function Home() {
   const [query, setQuery] = useState("");
   const [activeCategory, setActiveCategory] = useState("Trending");
+  const [activeSportSub, setActiveSportSub] = useState("All Sports");
   const [orderSide, setOrderSide] = useState<"yes" | "no">("yes");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [amountInput, setAmountInput] = useState<string>("10");
-  const [gridMarkets, setGridMarkets] = useState<ListMarket[]>(initialGridMarkets);
+
+  // Merge core markets with generated fall markets
+  const fallMarkets = useMemo(() => getAllFallMarkets().map(extendedToListMarket), []);
+  const [gridMarkets, setGridMarkets] = useState<ListMarket[]>([
+    ...coreMarkets,
+    ...fallMarkets,
+  ]);
 
   const {
     heroMarket,
@@ -211,6 +337,8 @@ export default function Home() {
     setGridMarkets((prev) =>
       prev.map((m) => {
         if (m.id !== id) return m;
+        // Reject trades on locked markets
+        if (m.status === "LOCKED") return m;
         const result = executeTrade(
           {
             id: m.id,
@@ -229,11 +357,21 @@ export default function Home() {
     );
   };
 
-  const visibleMarkets = gridMarkets.filter(
-    (market) =>
-      market.title.toLowerCase().includes(query.toLowerCase()) &&
-      (activeCategory === "Trending" || market.category === activeCategory)
-  );
+  // Filter logic: category + sport subcategory + search query
+  const visibleMarkets = gridMarkets.filter((market) => {
+    const matchesQuery = market.title.toLowerCase().includes(query.toLowerCase());
+    const matchesCategory =
+      activeCategory === "Trending" || market.category === activeCategory;
+    const matchesSportSub =
+      activeCategory !== "Sports" ||
+      activeSportSub === "All Sports" ||
+      market.subcategory === activeSportSub;
+    return matchesQuery && matchesCategory && matchesSportSub;
+  });
+
+  // Count locked vs open for display
+  const lockedCount = visibleMarkets.filter((m) => m.status === "LOCKED").length;
+  const openCount = visibleMarkets.filter((m) => m.status === "OPEN").length;
 
   return (
     <div className="app-shell">
@@ -288,13 +426,33 @@ export default function Home() {
             <button
               key={category}
               className={activeCategory === category ? "active" : ""}
-              onClick={() => setActiveCategory(category)}
+              onClick={() => {
+                setActiveCategory(category);
+                if (category !== "Sports") setActiveSportSub("All Sports");
+              }}
             >
               {category}
             </button>
           ))}
         </div>
       </div>
+
+      {activeCategory === "Sports" && (
+        <div className="category-bar" style={{ borderTop: "none", paddingTop: 0 }}>
+          <div className="category-scroll">
+            {sportSubcategories.map((sub) => (
+              <button
+                key={sub}
+                className={activeSportSub === sub ? "active" : ""}
+                onClick={() => setActiveSportSub(sub)}
+                style={{ fontSize: "0.8rem" }}
+              >
+                {sub}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <main>
         <section className="hero-market" id="markets">
@@ -490,7 +648,12 @@ export default function Home() {
           <div className="section-heading">
             <div>
               <h2>Markets moving at school</h2>
-              <p>What Eagles are predicting today</p>
+              <p>
+                {openCount > 0 && `${openCount} open`}
+                {openCount > 0 && lockedCount > 0 && " / "}
+                {lockedCount > 0 && `${lockedCount} locked`}
+                {openCount === 0 && lockedCount === 0 && "What Eagles are predicting today"}
+              </p>
             </div>
             <button>
               View all markets <ArrowRight size={17} />
