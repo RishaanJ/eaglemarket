@@ -5,6 +5,7 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DEFAULT_NEXT_PATH, safeNextPath } from "@/lib/security/next-path";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/client";
@@ -25,6 +26,21 @@ function BrandMark() {
       <i />
     </span>
   );
+}
+
+/**
+ * Where to land after login. proxy.ts sets ?next= when it bounces a signed out
+ * visitor off a protected route, which is what lets a shared link to a specific
+ * market survive the login round trip.
+ *
+ * Read at call time rather than held in state: it is only needed inside event
+ * handlers, and reading it during render would break server rendering. Always
+ * routed through safeNextPath — redirecting to a raw caller-supplied value
+ * would make this page an open redirect.
+ */
+function currentNextPath() {
+  if (typeof window === "undefined") return DEFAULT_NEXT_PATH;
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"));
 }
 
 export default function AuthPage() {
@@ -65,7 +81,7 @@ export default function AuthPage() {
     setMessage(null);
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
-    callbackUrl.searchParams.set("next", "/markets");
+    callbackUrl.searchParams.set("next", currentNextPath());
     if (mode === "signup") callbackUrl.searchParams.set("legal", LEGAL_POLICY_VERSION);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -158,7 +174,7 @@ export default function AuthPage() {
       return;
     }
 
-    router.push("/markets");
+    router.push(currentNextPath());
     router.refresh();
   }
 
