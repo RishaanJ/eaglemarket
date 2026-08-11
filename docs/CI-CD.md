@@ -56,13 +56,21 @@ collaborators with push access cannot.
 Settings → Branches → Add branch ruleset, targeting `main`:
 
 - [x] Require a pull request before merging
-  - Required approvals: **1**
+  - Required approvals: **0**
   - [x] Dismiss stale approvals when new commits are pushed
 - [x] Require status checks to pass before merging
   - [x] Require branches to be up to date before merging
   - Required checks: **`Lint, typecheck, build`** and **`Database (pgTAP)`**
 - [x] Block force pushes
 - [x] Restrict deletions
+- [x] Require conversation resolution before merging
+
+**Why zero approvals.** GitHub does not let you approve your own pull request.
+With a single maintainer, requiring one approval and enforcing the rule for
+admins means no PR can ever be merged — including your own — so `main` freezes
+until a second maintainer exists. Zero approvals still forces every change
+through a PR with green CI; it only drops the second pair of eyes we do not yet
+have. Raise this to **1** the moment someone else can review.
 
 The status check only appears in the picker after the workflow has run at least
 once, so merge this PR (or let its CI run) before configuring the ruleset.
@@ -76,11 +84,20 @@ gh api -X PUT repos/RishaanJ/eaglemarket/branches/main/protection \
   -f 'required_status_checks[contexts][]=Lint, typecheck, build' \
   -f 'required_status_checks[contexts][]=Database (pgTAP)' \
   -F 'enforce_admins=true' \
-  -F 'required_pull_request_reviews[required_approving_review_count]=1' \
+  -F 'required_pull_request_reviews[required_approving_review_count]=0' \
+  -F 'required_pull_request_reviews[dismiss_stale_reviews]=true' \
   -F 'restrictions=null' \
   -F 'allow_force_pushes=false' \
-  -F 'allow_deletions=false'
+  -F 'allow_deletions=false' \
+  -F 'required_conversation_resolution=true'
 ```
+
+`enforce_admins=true` is deliberate: it means even an admin cannot push straight
+to `main`. Combined with zero required approvals, the practical workflow is
+branch → PR → wait for CI → self-merge.
+
+Applied to this repository on 2026-08-10. Verified by attempting a direct push
+to `main`, which was rejected with `GH006: Protected branch update failed`.
 
 ## Continuous deployment (Vercel)
 
