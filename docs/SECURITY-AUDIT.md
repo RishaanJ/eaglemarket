@@ -39,13 +39,34 @@ have to reopen this file:
   freeze notifications both stop working if it is narrowed to `https://` alone,
   and they fail *silently*, with no console error on the happy path.
 
-### Known weaknesses, accepted for now
+### Accepted risk: `script-src 'unsafe-inline'`
 
-- **`script-src 'unsafe-inline'`.** Next.js emits inline bootstrap scripts. The
-  strict fix is a per-request nonce issued from `proxy.ts`, but a nonce forces
-  every page to render dynamically, which would remove static prerendering from
-  the seven currently-static routes. Deferred deliberately rather than
-  overlooked.
+**Status: known debt, accepted deliberately on 2026-08-10. Not an oversight.**
+
+Next.js emits inline bootstrap scripts, so the policy carries `'unsafe-inline'`
+in `script-src`. The practical consequence: if an XSS vector ever does reach the
+page, the CSP will not be the thing that stops it. Every other layer still
+applies — React escaping, `script-src-attr 'none'`, `object-src 'none'`,
+`base-uri 'self'`, `frame-ancestors 'none'` — but this specific backstop is
+absent.
+
+The strict fix is a per-request nonce issued from `proxy.ts`. It was **not**
+taken because a nonce must be generated per response, which forces every page to
+render dynamically and removes static prerendering from the seven currently
+static routes (`/`, `/auth`, `/auth/check-email`, `/landing`, `/markets`,
+`/privacy`, `/terms`).
+
+Revisit this if any of the following becomes true:
+
+- User-authored rich text is ever rendered (today all user text is plain text
+  escaped by React).
+- A third-party script origin is added to `script-src` — the combination is
+  meaningfully worse than either alone.
+- The static routes stop being worth preserving, or Next.js gains a way to
+  combine nonces with prerendering.
+
+Do **not** add `'unsafe-eval'` to production under any circumstance; it is
+currently development-only and should stay that way.
 - **`img-src https:`** allows any HTTPS image host, because `profiles.avatar_url`
   is user-controlled and may point anywhere. Tightening this requires deciding
   on an avatar hosting story first.

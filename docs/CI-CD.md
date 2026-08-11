@@ -5,6 +5,10 @@
 `.github/workflows/ci.yml` runs on every pull request targeting `main`, and on
 pushes to `main` so the default branch always carries a status.
 
+Two jobs run in parallel.
+
+**`Lint, typecheck, build`**
+
 | Step | Command | Fails the PR on |
 | --- | --- | --- |
 | Lint | `npm run lint` | any ESLint error |
@@ -15,6 +19,18 @@ pushes to `main` so the default branch always carries a status.
 Every check runs even when an earlier one fails, so a single run reports all
 problems rather than only the first. Runs are cancelled when a newer commit is
 pushed to the same PR.
+
+**`Database (pgTAP)`**
+
+Boots a local Supabase, applies every migration from scratch, and runs
+`supabase test db` against `supabase/tests/`. This job fails the PR on either a
+migration that does not apply cleanly or a failing database assertion — which is
+what keeps the authorization boundary and the trading invariants honest as the
+schema changes.
+
+Only the database container is started. `supabase test db` connects to Postgres
+directly, and `auth.users` is created by the postgres image rather than by
+GoTrue, so the other eleven services are excluded and never pulled.
 
 ### Why CI sets Supabase env vars
 
@@ -44,7 +60,7 @@ Settings → Branches → Add branch ruleset, targeting `main`:
   - [x] Dismiss stale approvals when new commits are pushed
 - [x] Require status checks to pass before merging
   - [x] Require branches to be up to date before merging
-  - Required check: **`Lint, typecheck, build`**
+  - Required checks: **`Lint, typecheck, build`** and **`Database (pgTAP)`**
 - [x] Block force pushes
 - [x] Restrict deletions
 
@@ -58,6 +74,7 @@ gh api -X PUT repos/RishaanJ/eaglemarket/branches/main/protection \
   -H "Accept: application/vnd.github+json" \
   -f 'required_status_checks[strict]=true' \
   -f 'required_status_checks[contexts][]=Lint, typecheck, build' \
+  -f 'required_status_checks[contexts][]=Database (pgTAP)' \
   -F 'enforce_admins=true' \
   -F 'required_pull_request_reviews[required_approving_review_count]=1' \
   -F 'restrictions=null' \

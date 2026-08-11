@@ -66,3 +66,40 @@ jobs:
           else
             echo "No test script defined yet — skipping."
           fi
+
+  database:
+    name: Database (pgTAP)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Set up Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only the database is needed. `supabase test db` talks to Postgres
+      # directly, and auth.users — which the schema's trigger depends on — is
+      # created by the postgres image itself, not by GoTrue. Excluding the rest
+      # avoids pulling several GB of images that no test touches.
+      - name: Start Supabase (database only)
+        run: |
+          npx supabase start \
+            -x studio,mailpit,realtime,storage-api,imgproxy,edge-runtime \
+            -x logflare,vector,supavisor,postgrest,postgres-meta,gotrue
+
+      # Applies every migration from scratch, then runs the pgTAP suite. A
+      # migration that does not apply cleanly fails here rather than in prod.
+      - name: Run pgTAP suite
+        run: npx supabase test db
+
+      - name: Stop Supabase
+        if: always()
+        run: npx supabase stop --no-backup
