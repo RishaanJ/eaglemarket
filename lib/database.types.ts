@@ -77,6 +77,50 @@ export type Database = {
           },
         ];
       };
+      announcements: {
+        Row: {
+          created_at: string;
+          created_by: string;
+          ends_at: string | null;
+          id: number;
+          is_active: boolean;
+          message: string;
+          severity: string;
+          starts_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          created_at?: string;
+          created_by: string;
+          ends_at?: string | null;
+          id?: never;
+          is_active?: boolean;
+          message: string;
+          severity?: string;
+          starts_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          created_at?: string;
+          created_by?: string;
+          ends_at?: string | null;
+          id?: never;
+          is_active?: boolean;
+          message?: string;
+          severity?: string;
+          starts_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "announcements_created_by_fkey";
+            columns: ["created_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       categories: {
         Row: {
           color: string;
@@ -567,6 +611,14 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      admin_create_announcement: {
+        Args: {
+          p_ends_at?: string | null;
+          p_message: string;
+          p_severity?: string;
+        };
+        Returns: number;
+      };
       admin_create_market: {
         Args: {
           p_category_id: number;
@@ -580,6 +632,36 @@ export type Database = {
           p_status?: string;
         };
         Returns: number;
+      };
+      admin_delete_announcement: {
+        Args: {
+          p_id: number;
+        };
+        Returns: undefined;
+      };
+      admin_list_announcements: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          created_at: string;
+          ends_at: string | null;
+          id: number;
+          is_active: boolean;
+          is_live: boolean;
+          message: string;
+          severity: string;
+          starts_at: string;
+          updated_at: string;
+        }[];
+      };
+      admin_update_announcement: {
+        Args: {
+          p_ends_at?: string | null;
+          p_id: number;
+          p_is_active: boolean;
+          p_message: string;
+          p_severity: string;
+        };
+        Returns: undefined;
       };
       admin_list_markets: {
         Args: Record<PropertyKey, never>;

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AdminClient, { type AdminCategory, type AdminMarket } from "./admin-client";
+import { type AdminAnnouncement } from "./announcements-panel";
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -32,16 +33,17 @@ export default async function AdminPage() {
     );
   }
 
-  const [marketsResult, categoriesResult] = await Promise.all([
+  const [marketsResult, categoriesResult, announcementsResult] = await Promise.all([
     supabase.rpc("admin_list_markets"),
     supabase
       .from("categories")
       .select("id, name, color")
       .eq("is_active", true)
       .order("sort_order"),
+    supabase.rpc("admin_list_announcements"),
   ]);
 
-  if (marketsResult.error || categoriesResult.error) {
+  if (marketsResult.error || categoriesResult.error || announcementsResult.error) {
     return (
       <main className="sync-state">
         <strong>We couldn’t load market operations.</strong>
@@ -77,12 +79,23 @@ export default async function AdminPage() {
     color: category.color,
   }));
 
+  const announcements: AdminAnnouncement[] = (announcementsResult.data ?? []).map((row) => ({
+    id: Number(row.id),
+    message: row.message,
+    severity: row.severity,
+    isActive: row.is_active,
+    endsAt: row.ends_at,
+    isLive: row.is_live,
+    updatedAt: row.updated_at,
+  }));
+
   return (
     <AdminClient
       balance={Number(walletResult.data.balance)}
       displayName={profileResult.data.display_name}
       markets={markets}
       categories={categories}
+      announcements={announcements}
     />
   );
 }

@@ -29,6 +29,7 @@ import {
 import Link from "next/link";
 import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { AnnouncementBanner } from "@/components/announcement-banner";
 import { AppLoadingSkeleton } from "@/components/ui/app-loading-skeleton";
 import { DitherCardFrame } from "@/components/ui/hero-dithering";
 import { EagCoin } from "@/components/ui/eag-coin";
@@ -324,6 +325,8 @@ export default function Home() {
           <Link className="mobile-settings-link" href="/settings">Settings</Link>
         </nav>
       )}
+
+      <AnnouncementBanner />
 
       <div className="category-bar">
         <div className="category-scroll">
