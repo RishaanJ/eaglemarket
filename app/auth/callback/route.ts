@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { LEGAL_POLICY_VERSION } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/server";
 
 const AUTH_DESTINATIONS = new Set(["/markets", "/picks", "/rankings", "/settings", "/admin"]);
@@ -41,9 +42,28 @@ export async function GET(request: NextRequest) {
 
   if (code) {
     const supabase = await createClient();
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      const legalVersion = request.nextUrl.searchParams.get("legal");
+
+      if (data.user && legalVersion === LEGAL_POLICY_VERSION) {
+        const acceptedAt = new Date().toISOString();
+        const { error: consentError } = await supabase.auth.updateUser({
+          data: {
+            terms_accepted_at: acceptedAt,
+            privacy_accepted_at: acceptedAt,
+            age_13_confirmed_at: acceptedAt,
+            legal_policy_version: LEGAL_POLICY_VERSION,
+          },
+        });
+
+        if (consentError) {
+          console.error("OAuth consent recording failed", { code: consentError.code });
+          return redirectResponse("/auth?error=We%20couldn%27t%20record%20your%20account%20agreements.%20Please%20try%20again.");
+        }
+      }
+
       return redirectResponse(next);
     }
 

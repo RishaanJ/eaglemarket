@@ -114,6 +114,12 @@
 .formOptions { min-height: 22px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .remember { display: flex; align-items: center; gap: 8px; color: #4c5961; font-size: 11px; cursor: pointer; }
 .remember input { width: 15px; height: 15px; margin: 0; accent-color: #087fae; }
+.consentGroup { min-width: 0; margin: 0; padding: 2px 0 0; display: grid; gap: 11px; border: 0; }
+.consentOption { display: grid; grid-template-columns: 17px minmax(0, 1fr); align-items: start; gap: 10px; color: #536069; font-size: 11px; font-weight: 450; line-height: 1.5; cursor: pointer; }
+.consentOption input { width: 17px; height: 17px; margin: 1px 0 0; accent-color: #087fae; cursor: pointer; }
+.consentOption a { color: #087ba7; font-weight: 650; text-decoration: underline; text-decoration-color: rgb(8 123 167 / .35); text-underline-offset: 2px; }
+.consentOption a:hover { color: #055c7e; text-decoration-color: currentColor; }
+.consentOption:has(input:focus-visible) { outline: 2px solid rgb(7 152 206 / .28); outline-offset: 4px; border-radius: 3px; }
 .textButton, .switchPrompt button { padding: 0; border: 0; background: transparent; color: #087ba7; font-size: inherit; font-weight: 650; }
 .textButton:hover, .switchPrompt button:hover { color: #055c7e; text-decoration: underline; text-underline-offset: 3px; }
 

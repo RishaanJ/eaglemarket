@@ -6,6 +6,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
+import { LEGAL_POLICY_VERSION } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import {
@@ -33,6 +34,8 @@ export default function AuthPage() {
   const [mode, setMode] = useState<AuthMode>("login");
   const [captchaToken, setCaptchaToken] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [acceptedPolicies, setAcceptedPolicies] = useState(false);
+  const [confirmedAge, setConfirmedAge] = useState(false);
   const [reducedMotion, setReducedMotion] = useState(false);
   const [pending, setPending] = useState(false);
   const [message, setMessage] = useState<{ type: "error" | "success"; text: string } | null>(null);
@@ -50,11 +53,20 @@ export default function AuthPage() {
   }, []);
 
   async function continueWithGoogle() {
+    if (mode === "signup" && (!acceptedPolicies || !confirmedAge)) {
+      setMessage({
+        type: "error",
+        text: "Accept the Terms and Privacy Policy and confirm that you’re at least 13 to continue.",
+      });
+      return;
+    }
+
     setPending(true);
     setMessage(null);
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     callbackUrl.searchParams.set("next", "/markets");
+    if (mode === "signup") callbackUrl.searchParams.set("legal", LEGAL_POLICY_VERSION);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl.toString() },
@@ -70,11 +82,21 @@ export default function AuthPage() {
     setMode(nextMode);
     setMessage(null);
     setCaptchaToken("");
+    setAcceptedPolicies(false);
+    setConfirmedAge(false);
     turnstileRef.current?.reset();
   }
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+
+    if (mode === "signup" && (!acceptedPolicies || !confirmedAge)) {
+      setMessage({
+        type: "error",
+        text: "Accept the Terms and Privacy Policy and confirm that you’re at least 13 to continue.",
+      });
+      return;
+    }
 
     if (!turnstileSiteKey) {
       setMessage({
@@ -98,6 +120,7 @@ export default function AuthPage() {
     const fullName = String(form.get("name") ?? "").trim();
     const supabase = createClient();
     const confirmationUrl = new URL("/auth/confirm", window.location.origin);
+    const consentAcceptedAt = new Date().toISOString();
 
     const result = mode === "login"
       ? await supabase.auth.signInWithPassword({
@@ -109,7 +132,13 @@ export default function AuthPage() {
           email,
           password,
           options: {
-            data: { full_name: fullName },
+            data: {
+              full_name: fullName,
+              terms_accepted_at: consentAcceptedAt,
+              privacy_accepted_at: consentAcceptedAt,
+              age_13_confirmed_at: consentAcceptedAt,
+              legal_policy_version: LEGAL_POLICY_VERSION,
+            },
             emailRedirectTo: confirmationUrl.toString(),
             captchaToken,
           },
@@ -175,7 +204,7 @@ export default function AuthPage() {
 
             <button type="button" className={styles.googleButton} onClick={continueWithGoogle} disabled={pending}>
               <Image src="/google-g.svg" alt="" width={18} height={18} aria-hidden="true" />
-              {pending ? "Signing in…" : "Sign in with Google"}
+              {pending ? "Please wait…" : mode === "signup" ? "Sign up with Google" : "Sign in with Google"}
             </button>
 
             <div className={styles.divider}><span>or use your school email</span></div>
@@ -214,13 +243,48 @@ export default function AuthPage() {
                 </span>
               </label>
 
-              <div className={styles.formOptions}>
-                <label className={styles.remember}>
-                  <input type="checkbox" name="remember" />
-                  <span>Keep me logged in</span>
-                </label>
-                {mode === "login" && <button type="button" className={styles.textButton}>Forgot password?</button>}
-              </div>
+              {mode === "signup" && (
+                <fieldset className={styles.consentGroup}>
+                  <legend className="sr-only">Required agreements</legend>
+                  <div className={styles.consentOption}>
+                    <input
+                      id="policiesAccepted"
+                      type="checkbox"
+                      name="policiesAccepted"
+                      checked={acceptedPolicies}
+                      onChange={(event) => setAcceptedPolicies(event.target.checked)}
+                      required
+                    />
+                    <span>
+                      <label htmlFor="policiesAccepted">I agree to the </label>
+                      <Link href="/terms" target="_blank" rel="noreferrer">Terms of Service</Link>
+                      <label htmlFor="policiesAccepted"> and </label>
+                      <Link href="/privacy" target="_blank" rel="noreferrer">Privacy Policy</Link>
+                      <label htmlFor="policiesAccepted">.</label>
+                    </span>
+                  </div>
+                  <label className={styles.consentOption}>
+                    <input
+                      type="checkbox"
+                      name="ageConfirmed"
+                      checked={confirmedAge}
+                      onChange={(event) => setConfirmedAge(event.target.checked)}
+                      required
+                    />
+                    <span>I confirm that I am at least 13 years old.</span>
+                  </label>
+                </fieldset>
+              )}
+
+              {mode === "login" && (
+                <div className={styles.formOptions}>
+                  <label className={styles.remember}>
+                    <input type="checkbox" name="remember" />
+                    <span>Keep me logged in</span>
+                  </label>
+                  <button type="button" className={styles.textButton}>Forgot password?</button>
+                </div>
+              )}
 
               {turnstileSiteKey ? (
                 <div className={styles.turnstileBlock}>

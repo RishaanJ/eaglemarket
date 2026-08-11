@@ -1,0 +1,349 @@
+.page {
+  min-height: 100svh;
+  background: #fff;
+  color: #111820;
+}
+.header {
+  position: sticky;
+  z-index: 10;
+  top: 0;
+  height: 66px;
+  padding: 0 max(24px, calc((100vw - 1180px) / 2));
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #e8ebed;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(14px);
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: #111820;
+  text-decoration: none;
+  font-size: 18px;
+  font-weight: 730;
+  letter-spacing: -0.04em;
+}
+.mark {
+  position: relative;
+  width: 25px;
+  height: 21px;
+}
+.mark i {
+  position: absolute;
+  right: 0;
+  height: 4px;
+  border-radius: 999px;
+  background: #1498cf;
+  transform: rotate(-18deg);
+  transform-origin: right center;
+}
+.mark i:nth-child(1) {
+  top: 1px;
+  width: 23px;
+}
+.mark i:nth-child(2) {
+  top: 8px;
+  width: 18px;
+}
+.mark i:nth-child(3) {
+  top: 15px;
+  width: 12px;
+}
+.back {
+  height: 36px;
+  padding: 0 12px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid #e0e4e7;
+  border-radius: 8px;
+  color: #3e474f;
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 620;
+  transition:
+    border-color 150ms ease,
+    background 150ms ease;
+}
+.back:hover {
+  border-color: #cbd2d6;
+  background: #f7f9fa;
+}
+.layout {
+  width: min(1120px, calc(100% - 48px));
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 210px minmax(0, 720px);
+  gap: 84px;
+  align-items: start;
+  justify-content: center;
+}
+.sidebar {
+  position: sticky;
+  top: 102px;
+  padding-top: 64px;
+}
+.sidebar > span {
+  display: block;
+  margin-bottom: 16px;
+  color: #929aa0;
+  font-size: 9px;
+  font-weight: 720;
+  letter-spacing: 0.12em;
+}
+.sidebar nav {
+  display: flex;
+  flex-direction: column;
+}
+.sidebar a {
+  padding: 8px 0;
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  color: #717a81;
+  text-decoration: none;
+  font-size: 11px;
+  line-height: 1.2;
+}
+.sidebar a:hover {
+  color: #111820;
+}
+.sidebar b {
+  color: #b3b9bd;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 8px;
+  font-weight: 500;
+}
+.document {
+  min-width: 0;
+  padding: 86px 0 120px;
+}
+.eyebrow {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #087fab;
+  font-size: 9px;
+  font-weight: 740;
+  letter-spacing: 0.12em;
+}
+.document h1 {
+  max-width: none;
+  margin: 20px 0 0;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
+  font-size: clamp(3.2rem, 7vw, 5.6rem);
+  font-weight: 520;
+  line-height: 0.94;
+  letter-spacing: -0.072em;
+}
+.lede {
+  max-width: 590px;
+  margin: 27px 0 0;
+  color: #59636b;
+  font-size: 18px;
+  line-height: 1.55;
+  letter-spacing: -0.018em;
+  text-wrap: pretty;
+}
+.meta {
+  margin-top: 28px;
+  padding-bottom: 35px;
+  display: flex;
+  gap: 20px;
+  border-bottom: 1px solid #e5e8ea;
+  color: #92999e;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.callout {
+  margin: 38px 0 32px;
+  padding: 19px 21px;
+  border: 1px solid #cce7f2;
+  border-radius: 12px;
+  background: #f3fafc;
+}
+.callout strong {
+  display: block;
+  color: #087fab;
+  font-size: 10px;
+  font-weight: 720;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.callout p {
+  margin: 7px 0 0;
+  color: #36535f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.document > p,
+.document section > p {
+  margin: 0 0 16px;
+  color: #4f5961;
+  font-size: 14px;
+  line-height: 1.75;
+  text-wrap: pretty;
+}
+.document p strong {
+  color: #20282e;
+  font-weight: 640;
+}
+.document section {
+  padding-top: 62px;
+  scroll-margin-top: 72px;
+}
+.sectionTitle {
+  margin-bottom: 22px;
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+}
+.sectionTitle span {
+  color: #1498cf;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 9px;
+}
+.sectionTitle h2 {
+  margin: 0;
+  color: #111820;
+  font-size: 25px;
+  font-weight: 600;
+  line-height: 1.15;
+  letter-spacing: -0.045em;
+}
+.document ul {
+  margin: 4px 0 19px;
+  padding: 0;
+  list-style: none;
+}
+.document li {
+  position: relative;
+  margin-top: 9px;
+  padding-left: 20px;
+  color: #4f5961;
+  font-size: 14px;
+  line-height: 1.65;
+}
+.document li::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: 0.7em;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #1498cf;
+}
+.document section a {
+  color: #087fab;
+  font-weight: 610;
+  text-underline-offset: 3px;
+}
+.documentFooter {
+  margin-top: 72px;
+  padding: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  border: 1px solid #dfe4e7;
+  border-radius: 14px;
+  background: #fafbfc;
+}
+.documentFooter div {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+.documentFooter span {
+  color: #91999e;
+  font-size: 8px;
+  font-weight: 720;
+  letter-spacing: 0.11em;
+}
+.documentFooter strong {
+  font-size: 14px;
+  font-weight: 620;
+  letter-spacing: -0.02em;
+}
+.documentFooter a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #111820;
+  text-decoration: none;
+  font-size: 11px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+@media (max-width: 860px) {
+  .layout {
+    width: min(720px, calc(100% - 40px));
+    display: block;
+  }
+  .sidebar {
+    display: none;
+  }
+  .document {
+    padding-top: 68px;
+  }
+}
+@media (max-width: 560px) {
+  .header {
+    height: 60px;
+    padding: 0 16px;
+  }
+  .brand {
+    font-size: 16px;
+  }
+  .back {
+    padding: 0 10px;
+    font-size: 0;
+  }
+  .back svg {
+    width: 17px;
+    height: 17px;
+  }
+  .layout {
+    width: calc(100% - 32px);
+  }
+  .document {
+    padding: 55px 0 80px;
+  }
+  .document h1 {
+    font-size: 3.35rem;
+  }
+  .lede {
+    font-size: 16px;
+  }
+  .meta {
+    flex-direction: column;
+    gap: 7px;
+  }
+  .document section {
+    padding-top: 50px;
+  }
+  .sectionTitle {
+    gap: 11px;
+  }
+  .sectionTitle h2 {
+    font-size: 22px;
+  }
+  .documentFooter {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+  .documentFooter a {
+    margin-top: 3px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .back {
+    transition: none;
+  }
+}
