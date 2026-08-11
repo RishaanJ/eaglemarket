@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import {
   ArrowRight,
+  ArrowUpRight,
   Bell,
   CalendarDays,
   Check,
@@ -572,6 +573,16 @@ export default function Home() {
           </motion.div>
         </section>
         </MotionReveal>
+
+        <div className="request-market">
+          <a
+            href="https://tally.so/r/D4OkgR"
+            target="_blank"
+            rel="noreferrer noopener"
+          >
+            Request a Market <ArrowUpRight size={15} />
+          </a>
+        </div>
       </main>
       {tradeFeedback && <TradeConfirmation key={tradeFeedback.id} feedback={tradeFeedback} />}
     </div>

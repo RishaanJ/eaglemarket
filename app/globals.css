@@ -1000,3 +1000,9 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
   .detail-chart-wrap { height: 270px; }
   .detail-rules { padding: 20px; }
 }
+
+/* Outbound link to the Tally market-request form, centred under the market grid. */
+.request-market { margin-top: 44px; display: flex; justify-content: center; }
+.request-market a { height: 44px; padding: 0 22px; display: inline-flex; align-items: center; gap: 8px; border: 1px solid var(--border); border-radius: 9px; background: white; color: var(--ink); text-decoration: none; font-size: 13px; font-weight: 650; box-shadow: 0 1px 2px oklch(0.21 0.03 250 / .05); transition: border-color 160ms ease, background 160ms ease, color 160ms ease; }
+.request-market a:hover { border-color: oklch(0.78 0.06 230); background: var(--primary-pale); color: var(--primary-dark); }
+.request-market svg { flex: 0 0 auto; }
