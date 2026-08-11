@@ -220,3 +220,133 @@
     padding: 16px 16px 48px;
   }
 }
+
+.exitBlock {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid oklch(0.93 0.01 240);
+  display: grid;
+  gap: 8px;
+}
+
+.exitSideToggle {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
+.exitSideToggle button {
+  padding: 6px 0;
+  border: 1px solid oklch(0.9 0.01 240);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 700;
+  color: oklch(0.5 0.02 240);
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.exitSideToggle button:hover {
+  border-color: oklch(0.8 0.02 240);
+}
+
+.exitSideActive {
+  border-color: oklch(0.55 0.16 255) !important;
+  color: oklch(0.5 0.16 255) !important;
+  background: oklch(0.97 0.02 255) !important;
+}
+
+.exitLabel {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: oklch(0.6 0.02 240);
+}
+
+.exitInput {
+  width: 100%;
+  padding: 9px 11px;
+  border: 1px solid oklch(0.9 0.01 240);
+  border-radius: 9px;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  background: oklch(1 0 0);
+  color: inherit;
+}
+
+.exitInput:focus {
+  outline: 2px solid oklch(0.72 0.1 255);
+  outline-offset: 1px;
+}
+
+.exitQuick {
+  display: grid;
+  grid-auto-flow: column;
+  gap: 6px;
+}
+
+.exitQuick button {
+  padding: 5px 0;
+  border: 1px solid oklch(0.92 0.01 240);
+  border-radius: 7px;
+  background: transparent;
+  font-size: 12px;
+  font-weight: 600;
+  color: oklch(0.5 0.02 240);
+  cursor: pointer;
+}
+
+.exitQuick button:hover {
+  border-color: oklch(0.8 0.02 240);
+}
+
+.exitPreview {
+  display: grid;
+  gap: 5px;
+  padding: 9px 11px;
+  border-radius: 9px;
+  background: oklch(0.97 0.005 240);
+}
+
+.exitPreview > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.exitPreview span {
+  color: oklch(0.53 0.02 240);
+}
+
+.exitPreview strong {
+  font-variant-numeric: tabular-nums;
+}
+
+.exitButton {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  width: 100%;
+  padding: 10px 0;
+  border: 0;
+  border-radius: 9px;
+  background: oklch(0.42 0.03 240);
+  color: oklch(0.99 0 0);
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.exitButton:hover:not(:disabled) {
+  background: oklch(0.34 0.03 240);
+}
+
+.exitButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

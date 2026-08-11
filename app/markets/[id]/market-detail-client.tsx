@@ -26,6 +26,7 @@ import { NotificationPanel } from "@/components/notification-panel";
 import {
   calculateProbability,
   calculatePurchaseOutput,
+  calculateSaleOutput,
   calculateSlippage,
 } from "@/lib/amm";
 import { createClient } from "@/lib/supabase/client";
@@ -137,9 +138,15 @@ export default function MarketDetailClient({
   const [side, setSide] = useState<"yes" | "no">("yes");
   const [amountInput, setAmountInput] = useState("10");
   const [trading, setTrading] = useState(false);
+  const [exitSide, setExitSide] = useState<"yes" | "no">("yes");
+  const [exitInput, setExitInput] = useState("");
+  const [selling, setSelling] = useState(false);
+  const [sold, setSold] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [confirmed, setConfirmed] = useState(false);
   const pendingTrade = useRef<{ fingerprint: string; key: string } | null>(null);
+  const pendingSell = useRef<{ fingerprint: string; key: string } | null>(null);
+  const soldTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const confirmTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const probYes = Math.round(calculateProbability(market.poolYes, market.poolNo) * 100);
@@ -161,9 +168,43 @@ export default function MarketDetailClient({
     ? position.yesShares * (probYes / 100) + position.noShares * (probNo / 100)
     : 0;
 
+  // Which sides can actually be exited. Holding both is possible, so the
+  // toggle only appears when there is a genuine choice to make.
+  const exitSides = useMemo(() => {
+    const sides: Array<"yes" | "no"> = [];
+    if ((position?.yesShares ?? 0) > 0) sides.push("yes");
+    if ((position?.noShares ?? 0) > 0) sides.push("no");
+    return sides;
+  }, [position?.yesShares, position?.noShares]);
+
+  // Derived rather than corrected in an effect: if the selected side is sold
+  // out from under the toggle, fall through to whatever is still held.
+  const effectiveExitSide = exitSides.includes(exitSide) ? exitSide : (exitSides[0] ?? "yes");
+
+  const heldOnExitSide =
+    effectiveExitSide === "yes" ? (position?.yesShares ?? 0) : (position?.noShares ?? 0);
+  const exitShares = parseFloat(exitInput) || 0;
+  // Selling the whole holding has to send the exact stored value, not a
+  // rounded one: rounding up exceeds what is held and the database rejects it.
+  const isClosingAll = heldOnExitSide > 0 && Math.abs(exitShares - heldOnExitSide) < 1e-8;
+  const salePreview =
+    exitShares > 0 && exitShares <= heldOnExitSide
+      ? calculateSaleOutput(exitShares, market.poolYes, market.poolNo, effectiveExitSide === "yes")
+      : null;
+
+  const setExitFraction = useCallback(
+    (fraction: number) => {
+      if (heldOnExitSide <= 0) return;
+      const target = fraction >= 1 ? heldOnExitSide : heldOnExitSide * fraction;
+      setExitInput(String(Number(target.toFixed(8))));
+    },
+    [heldOnExitSide],
+  );
+
   useEffect(
     () => () => {
       if (confirmTimer.current) clearTimeout(confirmTimer.current);
+      if (soldTimer.current) clearTimeout(soldTimer.current);
     },
     [],
   );
@@ -307,6 +348,92 @@ export default function MarketDetailClient({
       setTrading(false);
     }
   }, [amount, balance, market.id, side, state.canTrade]);
+
+  const submitSell = useCallback(async () => {
+    if (!state.canTrade || exitShares <= 0 || exitShares > heldOnExitSide) return;
+
+    setSelling(true);
+    setError(null);
+
+    // Send the exact held amount when closing out, so a rounded value cannot
+    // exceed the holding and be rejected.
+    const sharesToSell = isClosingAll ? heldOnExitSide : exitShares;
+    const fingerprint = `${market.id}:${sharesToSell}:${effectiveExitSide}`;
+    const idempotencyKey =
+      pendingSell.current?.fingerprint === fingerprint
+        ? pendingSell.current.key
+        : crypto.randomUUID();
+    pendingSell.current = { fingerprint, key: idempotencyKey };
+
+    // Floor the proceeds a little below the preview: the price can move
+    // between quote and fill, and a silent worse fill is the thing to avoid.
+    const minProceeds = salePreview
+      ? Number((salePreview.proceeds * 0.98).toFixed(4))
+      : undefined;
+
+    try {
+      const response = await fetch("/api/sells", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          marketId: market.id,
+          shares: Number(sharesToSell.toFixed(8)),
+          outcome: effectiveExitSide,
+          idempotencyKey,
+          minProceeds,
+        }),
+      });
+      const result = (await response.json()) as {
+        error?: string;
+        balance?: number;
+        pool_yes?: number;
+        pool_no?: number;
+        total_volume?: number;
+        remaining_yes_shares?: number;
+        remaining_no_shares?: number;
+      };
+
+      if (!response.ok) {
+        if (response.status < 500) pendingSell.current = null;
+        setError(result.error ?? "The sale could not be completed.");
+        return;
+      }
+
+      pendingSell.current = null;
+      setBalance(Number(result.balance));
+      setMarket((current) => ({
+        ...current,
+        poolYes: Number(result.pool_yes),
+        poolNo: Number(result.pool_no),
+        totalVolume: Number(result.total_volume),
+      }));
+      setPosition((current) =>
+        current
+          ? {
+              ...current,
+              yesShares: Number(result.remaining_yes_shares ?? 0),
+              noShares: Number(result.remaining_no_shares ?? 0),
+            }
+          : current,
+      );
+      setExitInput("");
+      setSold(true);
+      if (soldTimer.current) clearTimeout(soldTimer.current);
+      soldTimer.current = setTimeout(() => setSold(false), 3200);
+    } catch {
+      setError("The network request failed. Your position was not sold twice; try again safely.");
+    } finally {
+      setSelling(false);
+    }
+  }, [
+    effectiveExitSide,
+    exitShares,
+    heldOnExitSide,
+    isClosingAll,
+    market.id,
+    salePreview,
+    state.canTrade,
+  ]);
 
   return (
     <div className="app-shell">
@@ -517,6 +644,82 @@ export default function MarketDetailClient({
                     <strong>{Math.round(positionValue).toLocaleString()} EAG</strong>
                   </div>
                 </div>
+
+                {state.canTrade && (
+                  <div className={styles.exitBlock}>
+                    {exitSides.length > 1 && (
+                      <div className={styles.exitSideToggle}>
+                        {exitSides.map((exitOption) => (
+                          <button
+                            key={exitOption}
+                            className={effectiveExitSide === exitOption ? styles.exitSideActive : ""}
+                            onClick={() => setExitSide(exitOption)}
+                          >
+                            {exitOption.toUpperCase()}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    <label className={styles.exitLabel} htmlFor="exit-shares">
+                      Contracts to sell
+                    </label>
+                    <input
+                      id="exit-shares"
+                      className={styles.exitInput}
+                      inputMode="decimal"
+                      value={exitInput}
+                      onChange={(event) => setExitInput(event.target.value)}
+                      placeholder="0"
+                    />
+                    <div className={styles.exitQuick}>
+                      <button onClick={() => setExitFraction(0.25)}>25%</button>
+                      <button onClick={() => setExitFraction(0.5)}>50%</button>
+                      <button onClick={() => setExitFraction(1)}>All</button>
+                    </div>
+
+                    {/* Preview uses the same curve the database will price
+                        against, so the number shown is the number filled —
+                        subject to the price moving, which minProceeds guards. */}
+                    {salePreview && (
+                      <div className={styles.exitPreview}>
+                        <div>
+                          <span>You receive</span>
+                          <strong>{salePreview.proceeds.toFixed(2)} EAG</strong>
+                        </div>
+                        <div>
+                          <span>Average price</span>
+                          <strong>{Math.round(salePreview.avgPrice * 100)}c</strong>
+                        </div>
+                      </div>
+                    )}
+
+                    <button
+                      className={styles.exitButton}
+                      onClick={submitSell}
+                      disabled={
+                        selling ||
+                        exitShares <= 0 ||
+                        exitShares > heldOnExitSide ||
+                        !salePreview
+                      }
+                    >
+                      {selling ? (
+                        <>
+                          <LoaderCircle className="trade-spinner" size={16} /> Selling…
+                        </>
+                      ) : sold ? (
+                        <>
+                          <Check size={16} /> Sold
+                        </>
+                      ) : isClosingAll ? (
+                        `Close position`
+                      ) : (
+                        `Sell ${effectiveExitSide.toUpperCase()}`
+                      )}
+                    </button>
+                  </div>
+                )}
               </section>
             )}
 
