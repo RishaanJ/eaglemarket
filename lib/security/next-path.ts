@@ -29,9 +29,11 @@ const STATIC_DESTINATIONS = new Set([
   "/admin",
 ]);
 
-// Per-market detail pages, e.g. /markets/12. Numeric ids only, so a shared
-// link to a specific market survives the login round trip.
-const MARKET_DETAIL_PATTERN = /^\/markets\/\d+$/;
+// Per-market detail pages, e.g. /markets/will-ahs-win-friday-12. Slug
+// characters only and a single segment, so a shared link to a specific market
+// survives the login round trip without widening this into "any path under
+// /markets".
+const MARKET_DETAIL_PATTERN = /^\/markets\/[a-z0-9]+(?:-[a-z0-9]+)*$/;
 
 export const DEFAULT_NEXT_PATH = "/markets";
 

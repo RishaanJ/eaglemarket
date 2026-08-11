@@ -1,418 +1,153 @@
-"use client";
-
-import {
-  CartesianGrid,
-  Line,
-  LineChart,
-  ResponsiveContainer,
-  Tooltip,
-  XAxis,
-  YAxis,
-} from "recharts";
-import {
-  ArrowLeft,
-  ArrowRight,
-  CalendarDays,
-  Check,
-  ChevronDown,
-  Clock3,
-  FlaskConical,
-  LoaderCircle,
-  Menu,
-  Mic2,
-  Search,
-  Settings,
-  Trophy,
-  type LucideIcon,
-} from "lucide-react";
-import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
-import { AppLoadingSkeleton } from "@/components/ui/app-loading-skeleton";
-import { DitherCardFrame } from "@/components/ui/hero-dithering";
-import { EagCoin } from "@/components/ui/eag-coin";
-import { MotionReveal } from "@/components/ui/motion-reveal";
-import { NotificationPanel } from "@/components/notification-panel";
-import { calculateProbability } from "@/lib/amm";
+import { notFound, redirect } from "next/navigation";
+import { safeHttpUrl } from "@/lib/security/safe-url";
 import { marketIdFromSlug, marketSlug } from "@/lib/slug";
-import { useMarketData, type SyncedMarket } from "@/lib/use-market";
+import { createClient } from "@/lib/supabase/server";
+import MarketDetailClient, { type MarketDetail } from "./market-detail-client";
 
-const categoryIcons: Record<string, LucideIcon> = {
-  classes: FlaskConical,
-  campus: CalendarDays,
-  spw: Trophy,
-  sports: Trophy,
-  clubs: Mic2,
+type MarketQueryRow = {
+  id: number;
+  question: string;
+  description: string | null;
+  resolution_criteria: string;
+  resolution_source_url: string | null;
+  status: string;
+  resolved_outcome: string | null;
+  opens_at: string;
+  closes_at: string;
+  pool_yes: number;
+  pool_no: number;
+  total_volume: number;
+  categories: { name: string; slug: string; color: string };
 };
 
-function closeLabel(closesAt: string) {
-  return `Closes ${new Date(closesAt).toLocaleDateString(undefined, {
-    month: "short",
+function formatDate(value: string) {
+  return new Date(value).toLocaleDateString(undefined, {
+    month: "long",
     day: "numeric",
-  })}`;
+    year: "numeric",
+  });
 }
 
-function EagleMark() {
-  return (
-    <div className="brand-mark" aria-hidden="true">
-      <span />
-      <span />
-      <span />
-    </div>
-  );
-}
-
-function SidebarMarket({ market }: { market: SyncedMarket }) {
-  const Icon = categoryIcons[market.category.slug] ?? CalendarDays;
-  const probYes = Math.round(
-    calculateProbability(Number(market.pool_yes), Number(market.pool_no)) * 100,
-  );
+/**
+ * Every market gets a plain-language note, not just the ones an admin wrote a
+ * description for. When `description` is empty we synthesise one from facts we
+ * always have, so the section never renders blank or disappears on some
+ * markets and not others.
+ */
+function marketNote(market: MarketQueryRow) {
+  const description = market.description?.trim();
+  if (description) return description;
 
   return (
-    <DitherCardFrame className="related-dither" icon={Icon} color={market.category.color}>
-      <Link className="related-card" href={`/markets/${marketSlug(market)}`}>
-        <span className="category-label">{market.category.name}</span>
-        <h3>{market.question}</h3>
-        <div className="related-meter">
-          <i style={{ width: `${probYes}%`, background: market.category.color }} />
-        </div>
-        <div className="related-foot">
-          <strong>{probYes}% yes</strong>
-          <span>{Number(market.total_volume).toLocaleString()} EAG</span>
-        </div>
-      </Link>
-    </DitherCardFrame>
+    `This is a ${market.categories.name.toLowerCase()} market. It opened on ` +
+    `${formatDate(market.opens_at)} and stops accepting predictions on ` +
+    `${formatDate(market.closes_at)}, at which point the outcome is checked ` +
+    `against the resolution rules below and every correct contract pays out ` +
+    `100 EAG.`
   );
 }
 
-export default function MarketDetailPage() {
-  const params = useParams<{ slug: string }>();
-  const router = useRouter();
-  const marketId = useMemo(() => marketIdFromSlug(params?.slug ?? ""), [params?.slug]);
+export default async function MarketDetailPage({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}) {
+  const { slug } = await params;
 
-  const [orderSide, setOrderSide] = useState<"yes" | "no">("yes");
-  const [amountInput, setAmountInput] = useState("10");
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [confirmed, setConfirmed] = useState(false);
+  // Slugs are `question-words-<id>`; the trailing id is what identifies the
+  // market, so editing a question never breaks an existing link. Anything
+  // without a usable id is a 404 rather than a database round trip.
+  const marketId = marketIdFromSlug(slug);
+  if (marketId === null) notFound();
 
-  const {
-    markets,
-    heroMarket: market,
-    marketMissing,
-    probYes,
-    probNo,
-    userBalance,
-    chartData,
-    loading,
-    trading,
-    error,
-    preview,
-    previewSlippage,
-    executeTrade,
-  } = useMarketData(marketId ?? undefined);
+  const supabase = await createClient();
+  const { data: authData, error: authError } = await supabase.auth.getUser();
+  if (authError || !authData.user) {
+    redirect(`/auth?next=/markets/${encodeURIComponent(slug)}`);
+  }
 
-  const numericAmount = parseFloat(amountInput) || 0;
-  const previewResult = preview(numericAmount, orderSide === "yes");
-  const potentialReturn = previewResult ? Math.floor(previewResult.sharesReceived) : 0;
-  const priceImpact = previewSlippage(numericAmount, orderSide === "yes");
-  const related = markets.filter((item) => item.id !== marketId).slice(0, 6);
+  const [marketResult, historyResult, walletResult, positionResult] = await Promise.all([
+    supabase
+      .from("markets")
+      .select(
+        "id, question, description, resolution_criteria, resolution_source_url, status, resolved_outcome, opens_at, closes_at, pool_yes, pool_no, total_volume, categories!inner(name, slug, color)",
+      )
+      .eq("id", marketId)
+      .maybeSingle(),
+    supabase
+      .from("market_price_history")
+      .select("probability_yes, created_at")
+      .eq("market_id", marketId)
+      .order("created_at", { ascending: true })
+      .limit(200),
+    supabase.from("wallets").select("balance").eq("user_id", authData.user.id).single(),
+    supabase
+      .from("positions")
+      .select("yes_shares, no_shares, total_invested")
+      .eq("user_id", authData.user.id)
+      .eq("market_id", marketId)
+      .maybeSingle(),
+  ]);
 
-  const placeTrade = async () => {
-    if (!market || numericAmount <= 0) return;
-    const succeeded = await executeTrade(market.id, numericAmount, orderSide);
-    if (succeeded) {
-      setConfirmed(true);
-      setTimeout(() => setConfirmed(false), 2600);
-    }
-  };
+  // RLS hides draft markets, so an unpublished market arrives here as null and
+  // correctly becomes a 404 rather than leaking its existence.
+  if (marketResult.error || !marketResult.data) notFound();
 
-  const topbar = (
-    <>
-      <header className="topbar">
-        <Link className="wordmark" href="/markets">
-          <EagleMark />
-          <span>EagleMarket</span>
-        </Link>
-        <nav className="primary-nav" aria-label="Primary navigation">
-          <Link href="/markets">Markets</Link>
-          <Link href="/picks">My picks</Link>
-          <Link href="/rankings">Rankings</Link>
-        </nav>
-        <label className="search-box">
-          <Search size={18} />
-          <input readOnly placeholder="Search markets" onFocus={() => router.push("/markets")} />
-          <kbd>Cmd K</kbd>
-        </label>
-        <div className="auth-actions">
-          <NotificationPanel />
-          <button className="token-balance">
-            <EagCoin size="sm" /> {userBalance.toLocaleString()} EAG
-          </button>
-          <Link className="icon-button" href="/settings" aria-label="Settings">
-            <Settings size={18} />
-          </Link>
-        </div>
-        <button
-          className="mobile-menu"
-          onClick={() => setMobileOpen((open) => !open)}
-          aria-label="Toggle menu"
-        >
-          <Menu />
-        </button>
-      </header>
-      {mobileOpen && (
-        <nav className="mobile-nav">
-          <Link href="/markets">Markets</Link>
-          <Link href="/picks">My picks</Link>
-          <Link href="/rankings">Rankings</Link>
-          <Link href="/settings">Settings</Link>
-        </nav>
-      )}
-    </>
-  );
-
-  if (loading) return <AppLoadingSkeleton kind="markets" />;
-
-  if (!market) {
+  if (historyResult.error || walletResult.error || positionResult.error) {
     return (
-      <div className="app-shell">
-        {topbar}
-        <main className="market-detail-main">
-          <div className="detail-empty">
-            <strong>This market isn&apos;t available</strong>
-            <p>
-              {marketId === null
-                ? "That link doesn't point at a market."
-                : marketMissing
-                  ? "It may have closed or been resolved since the link was shared."
-                  : (error ?? "It may have closed or been resolved.")}
-            </p>
-            <Link className="detail-back-cta" href="/markets">
-              <ArrowLeft size={15} /> Back to all markets
-            </Link>
-          </div>
-        </main>
-      </div>
+      <main className="sync-state">
+        <strong>We couldn’t load this market.</strong>
+        <span>Please refresh the page or try again in a moment.</span>
+      </main>
     );
   }
 
-  const Icon = categoryIcons[market.category.slug] ?? CalendarDays;
+  const row = marketResult.data as unknown as MarketQueryRow;
+
+  // Keep one canonical URL per market: if the question was edited (or someone
+  // hand-typed just the id) send them to the current slug.
+  const canonical = marketSlug({ id: row.id, question: row.question });
+  if (slug !== canonical) redirect(`/markets/${canonical}`);
+
+  const market: MarketDetail = {
+    id: row.id,
+    question: row.question,
+    note: marketNote(row),
+    resolutionCriteria: row.resolution_criteria,
+    // Admin-supplied and stored unvalidated: anything that is not http(s) is
+    // dropped rather than rendered as a link.
+    resolutionSourceUrl: safeHttpUrl(row.resolution_source_url),
+    status: row.status,
+    resolvedOutcome: row.resolved_outcome as "yes" | "no" | null,
+    opensAt: row.opens_at,
+    closesAt: row.closes_at,
+    poolYes: Number(row.pool_yes),
+    poolNo: Number(row.pool_no),
+    totalVolume: Number(row.total_volume),
+    categoryName: row.categories.name,
+    categorySlug: row.categories.slug,
+    categoryColor: row.categories.color,
+  };
+
+  const history = (historyResult.data ?? []).map((point) => {
+    const yes = Math.round(Number(point.probability_yes) * 100);
+    return { timestamp: point.created_at, yes, no: 100 - yes };
+  });
 
   return (
-    <div className="app-shell">
-      {topbar}
-
-      <main className="market-detail-main">
-        <Link className="detail-back" href="/markets">
-          <ArrowLeft size={14} /> All markets
-        </Link>
-
-        {error && <div className="sync-error">{error}</div>}
-
-        <div className="market-detail-layout">
-          <div className="detail-primary">
-            <MotionReveal>
-              <DitherCardFrame
-                className="detail-head-dither"
-                icon={Icon}
-                color={market.category.color}
-              >
-              <section className="detail-head">
-                <div className="detail-meta">
-                  <span className="category-label">{market.category.name}</span>
-                  <span className="open-label">
-                    <span /> {market.status}
-                  </span>
-                </div>
-                <h1>{market.question}</h1>
-                <div className="market-stats">
-                  <span>
-                    <strong>{Number(market.total_volume).toLocaleString()} EAG</strong> volume
-                  </span>
-                  <span>
-                    <Clock3 size={15} />
-                    <strong>{closeLabel(market.closes_at)}</strong>
-                  </span>
-                </div>
-              </section>
-              </DitherCardFrame>
-            </MotionReveal>
-
-            <MotionReveal delay={0.05}>
-              <section className="detail-chart-card" aria-label="Market probability chart">
-                <div className="chart-header">
-                  <div className="detail-price">
-                    <strong>{probYes}%</strong>
-                    <span>chance of yes</span>
-                  </div>
-                  <div className="chart-legend">
-                    <span>
-                      <i className="legend-dot yes-line" /> Yes <strong>{probYes}%</strong>
-                    </span>
-                    <span>
-                      <i className="legend-dot no-line" /> No <strong>{probNo}%</strong>
-                    </span>
-                  </div>
-                </div>
-                <div className="detail-chart-wrap">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <LineChart data={chartData} margin={{ top: 15, right: 8, bottom: 0, left: -6 }}>
-                      <CartesianGrid stroke="oklch(0.83 0 0)" strokeDasharray="2 7" vertical={false} />
-                      <XAxis
-                        dataKey="day"
-                        tickLine={false}
-                        axisLine={false}
-                        tick={{ fill: "oklch(0.53 0.02 240)", fontSize: 11 }}
-                        interval="preserveStartEnd"
-                        minTickGap={28}
-                      />
-                      <YAxis
-                        orientation="right"
-                        domain={[0, 100]}
-                        ticks={[0, 25, 50, 75, 100]}
-                        tickLine={false}
-                        axisLine={false}
-                        width={38}
-                        tick={{ fill: "oklch(0.53 0.02 240)", fontSize: 11 }}
-                        tickFormatter={(v) => `${v}%`}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          border: "none",
-                          borderRadius: 8,
-                          boxShadow: "0 3px 8px oklch(0.2 0.03 240 / .14)",
-                          fontSize: 12,
-                        }}
-                        formatter={(value, name) => [`${value}%`, name === "yes" ? "Yes" : "No"]}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="no"
-                        stroke="oklch(0.62 0.2 25)"
-                        strokeWidth={2.5}
-                        dot={false}
-                        activeDot={{ r: 4, fill: "oklch(0.62 0.2 25)", strokeWidth: 0 }}
-                      />
-                      <Line
-                        type="monotone"
-                        dataKey="yes"
-                        stroke="oklch(0.58 0.18 255)"
-                        strokeWidth={2.5}
-                        dot={false}
-                        activeDot={{ r: 4, fill: "oklch(0.58 0.18 255)", strokeWidth: 0 }}
-                      />
-                    </LineChart>
-                  </ResponsiveContainer>
-                </div>
-              </section>
-            </MotionReveal>
-
-            <MotionReveal delay={0.1}>
-              <div className="detail-rules">
-                <h2>How this resolves</h2>
-                <p>{market.resolution_criteria}</p>
-                {market.description && <p className="detail-rules-note">{market.description}</p>}
-                {market.resolution_source_url && (
-                  <a
-                    className="detail-source"
-                    href={market.resolution_source_url}
-                    target="_blank"
-                    rel="noreferrer noopener"
-                  >
-                    Resolution source <ArrowRight size={13} />
-                  </a>
-                )}
-              </div>
-            </MotionReveal>
-          </div>
-
-          <aside className="detail-sidebar">
-            <div className="order-panel detail-order-panel">
-                <div className="order-title">
-                <span>Make a prediction</span>
-                <span>Balance {userBalance.toLocaleString()} EAG</span>
-                </div>
-                <div className="side-toggle">
-                <button
-                  className={orderSide === "yes" ? "active yes" : ""}
-                  onClick={() => setOrderSide("yes")}
-                >
-                  Yes <span>{probYes}c</span>
-                </button>
-                <button
-                  className={orderSide === "no" ? "active no" : ""}
-                  onClick={() => setOrderSide("no")}
-                >
-                  No <span>{probNo}c</span>
-                </button>
-                </div>
-                <label className="amount-label">Tokens</label>
-                <div className="amount-input">
-                <EagCoin size="sm" />
-                <input
-                  inputMode="decimal"
-                  value={amountInput}
-                  onChange={(event) => setAmountInput(event.target.value)}
-                  placeholder="0"
-                />
-                <button type="button">
-                  EAG <ChevronDown size={14} />
-                </button>
-                </div>
-                <div className="quick-amounts">
-                <button onClick={() => setAmountInput("10")}>10</button>
-                <button onClick={() => setAmountInput("25")}>25</button>
-                <button onClick={() => setAmountInput("50")}>50</button>
-                <button onClick={() => setAmountInput(String(userBalance))}>Max</button>
-                </div>
-                <div className="order-summary">
-                <span>Potential return</span>
-                <strong>{potentialReturn} EAG</strong>
-                </div>
-                {priceImpact > 0 && (
-                <div className="detail-impact">
-                  Price impact {(priceImpact * 100).toFixed(1)}%
-                </div>
-                )}
-                <button
-                className={confirmed ? "review-button confirmed" : "review-button"}
-                onClick={placeTrade}
-                disabled={trading || numericAmount <= 0 || numericAmount > userBalance}
-                >
-                {trading ? (
-                  <>
-                    <LoaderCircle className="trade-spinner" size={17} /> Confirming…
-                  </>
-                ) : confirmed ? (
-                  <>
-                    <Check size={17} /> Prediction confirmed
-                  </>
-                ) : (
-                  <>
-                    Confirm prediction <ArrowRight size={17} />
-                  </>
-                )}
-                </button>
-                <p>
-                EAG are free tokens with no cash value. Correct picks settle at 100 EAG per
-                contract.
-                </p>
-            </div>
-
-            <div className="detail-sidebar-head" id="more-markets">
-              <h2>More markets</h2>
-              <Link href="/markets">
-                View all <ArrowRight size={13} />
-              </Link>
-            </div>
-            {related.length ? (
-              related.map((item) => <SidebarMarket key={item.id} market={item} />)
-            ) : (
-              <p className="detail-sidebar-empty">No other markets are open right now.</p>
-            )}
-          </aside>
-        </div>
-      </main>
-    </div>
+    <MarketDetailClient
+      market={market}
+      history={history}
+      balance={Number(walletResult.data?.balance ?? 0)}
+      position={
+        positionResult.data
+          ? {
+              yesShares: Number(positionResult.data.yes_shares),
+              noShares: Number(positionResult.data.no_shares),
+              invested: Number(positionResult.data.total_invested),
+            }
+          : null
+      }
+    />
   );
 }
