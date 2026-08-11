@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import AdminClient, { type AdminCategory, type AdminMarket } from "./admin-client";
@@ -26,7 +27,7 @@ export default async function AdminPage() {
       <main className="admin-denied">
         <strong>Administrator access required</strong>
         <span>Your account does not have permission to manage markets.</span>
-        <a href="/markets">Return to markets</a>
+        <Link href="/markets">Return to markets</Link>
       </main>
     );
   }
