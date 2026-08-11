@@ -203,7 +203,7 @@ export default function AdminClient({
   return (
     <div className="app-shell admin-shell">
       <header className="topbar">
-        <Link className="wordmark" href="/"><EagleMark /><span>EagleMarket</span></Link>
+        <Link className="wordmark" href="/markets"><EagleMark /><span>EagleMarket</span></Link>
         <nav className="primary-nav" aria-label="Primary navigation">
           <Link href="/markets">Markets</Link>
           <Link href="/picks">My picks</Link>

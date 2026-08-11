@@ -908,3 +908,95 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
   .confirmation-burst { display: none; }
   .skeleton::after { animation: none; display: none; }
 }
+
+/* Market detail (/markets/[slug]) */
+.market-card-link { position: absolute; inset: 0; z-index: 3; border-radius: inherit; }
+.market-card-link:focus-visible { outline-offset: -4px; }
+.market-card:hover .market-card-link ~ h3 { color: var(--primary-dark); }
+.market-card .watch-button, .market-card .trade-row { z-index: 4; }
+.market-card .trade-row { position: relative; }
+
+.market-detail-main { max-width: 1480px; margin: auto; padding: 22px 36px 72px; }
+.detail-back { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); text-decoration: none; font-size: 13px; font-weight: 600; }
+.detail-back:hover { color: var(--ink); }
+.market-detail-layout { margin-top: 18px; display: grid; grid-template-columns: minmax(0, 1fr) 352px; gap: 22px; align-items: start; }
+.detail-primary { min-width: 0; display: flex; flex-direction: column; gap: 16px; }
+
+/* Frame supplies the shell; the category icon becomes the corner dither motif. */
+.detail-head-dither { min-height: 0; border-radius: 14px; }
+.detail-head-dither::after { border-bottom-width: 2px; opacity: .5; }
+.detail-head-dither .dither-card-art { right: -1%; bottom: -46%; width: 23%; height: 176%; opacity: .1; }
+.detail-head-dither .dither-category-icon { right: 0; bottom: 0; width: 92%; height: 92%; }
+.detail-head-dither .dither-card-art canvas { opacity: .5; }
+.detail-head { padding: 26px 28px; }
+.detail-meta { display: flex; align-items: center; gap: 11px; }
+.detail-head h1 { position: relative; max-width: 24ch; margin: 18px 0 0; font-size: 34px; line-height: 1.08; }
+.detail-head .market-stats { margin-top: 18px; }
+
+.detail-chart-card { padding: 22px 26px 18px; border: 1px solid var(--border); border-radius: 14px; background: white; }
+.detail-price { display: flex; align-items: baseline; gap: 9px; }
+.detail-price strong { font-size: 40px; letter-spacing: -.055em; }
+.detail-price span { color: var(--muted); font-size: 12px; }
+.detail-chart-wrap { height: 420px; margin-top: 14px; }
+
+/* Bet panel sits at the top of the rail and stays put while the market list scrolls under it. */
+.detail-order-panel { position: sticky; top: 18px; z-index: 5; padding: 20px; border: 1px solid var(--border); border-radius: 14px; }
+.detail-order-panel .order-title { font-size: 13px; }
+.detail-order-panel .side-toggle { margin-top: 15px; }
+.detail-order-panel .amount-label { margin: 17px 0 7px; }
+.detail-order-panel .quick-amounts { margin-top: 7px; }
+.detail-order-panel .order-summary { margin-top: 15px; padding-top: 13px; }
+.detail-order-panel .review-button { height: 44px; margin-top: 13px; }
+.detail-order-panel > p { margin-top: 11px; }
+.detail-impact { margin-top: 6px; color: var(--muted); font-size: 11px; text-align: right; }
+.detail-rules { padding: 24px 26px; border: 1px solid var(--border); border-radius: 14px; background: white; }
+.detail-rules h2 { margin: 0 0 11px; font-size: 15px; font-weight: 660; letter-spacing: -.02em; }
+.detail-rules p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+.detail-rules-note { margin-top: 11px !important; padding-top: 11px; border-top: 1px solid var(--border); font-size: 12px !important; }
+.detail-source { margin-top: 14px; display: inline-flex; align-items: center; gap: 6px; color: var(--primary-dark); text-decoration: none; font-size: 12px; font-weight: 650; }
+
+.detail-sidebar { display: flex; flex-direction: column; gap: 10px; }
+.detail-sidebar-head { margin-top: 8px; display: flex; align-items: baseline; justify-content: space-between; }
+.detail-sidebar-head h2 { margin: 0; font-size: 14px; font-weight: 660; letter-spacing: -.02em; }
+.detail-sidebar-head a { display: inline-flex; align-items: center; gap: 5px; color: var(--primary-dark); text-decoration: none; font-size: 11px; font-weight: 650; }
+.related-dither { min-height: 0; border-radius: 12px; transition: transform 160ms ease, box-shadow 160ms ease; }
+.related-dither::after { border-bottom-width: 2px; opacity: .5; }
+.related-dither:hover { transform: translateY(-1px); box-shadow: 0 5px 16px -7px oklch(0.21 0.03 250 / .28); }
+.related-dither .dither-card-art { right: -14%; bottom: -24%; width: 64%; height: 68%; opacity: .1; }
+.related-dither .dither-category-icon { right: 0; bottom: -2%; width: 88%; height: 88%; }
+.related-dither .dither-card-art canvas { opacity: .5; }
+.related-card { position: relative; z-index: 2; display: block; padding: 14px 15px; color: inherit; text-decoration: none; }
+.related-card h3 { margin: 9px 0 0; font-size: 13px; font-weight: 600; line-height: 1.35; letter-spacing: -.015em; }
+.related-meter { height: 3px; margin-top: 13px; overflow: hidden; border-radius: 4px; background: oklch(0.93 0 0); }
+.related-meter i { display: block; height: 100%; }
+.related-foot { margin-top: 9px; display: flex; justify-content: space-between; color: var(--muted); font-size: 10px; }
+.related-foot strong { color: var(--ink); font-size: 11px; font-weight: 650; }
+.detail-sidebar-empty { margin: 0; padding: 18px; border: 1px dashed var(--border); border-radius: 12px; color: var(--muted); font-size: 12px; text-align: center; }
+
+.detail-empty { max-width: 420px; margin: 60px auto; padding: 34px; border: 1px solid var(--border); border-radius: 14px; background: white; text-align: center; }
+.detail-empty strong { font-size: 17px; }
+.detail-empty p { margin: 9px 0 20px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+.detail-back-cta { display: inline-flex; align-items: center; gap: 7px; height: 40px; padding: 0 16px; border-radius: 8px; background: var(--primary-dark); color: white; text-decoration: none; font-size: 13px; font-weight: 650; }
+
+@media (max-width: 1120px) {
+  .market-detail-layout { grid-template-columns: 1fr; }
+  .detail-order-panel { position: static; }
+  .detail-chart-wrap { height: 340px; }
+  /* .order-panel's narrow layout is built for the hero-market grid; keep this one stacked. */
+  .detail-order-panel { grid-column: auto; display: block; border-top: 1px solid var(--border); }
+  .detail-order-panel .order-title, .detail-order-panel .side-toggle,
+  .detail-order-panel .amount-input, .detail-order-panel .quick-amounts,
+  .detail-order-panel .order-summary, .detail-order-panel .review-button,
+  .detail-order-panel > p { grid-column: auto; grid-row: auto; }
+  .detail-order-panel .amount-label { grid-column: auto; margin: 27px 0 9px; align-self: auto; }
+}
+
+@media (max-width: 760px) {
+  .market-detail-main { padding: 16px 14px 50px; }
+  .detail-head { padding: 20px; }
+  .detail-head h1 { font-size: 26px; }
+  .detail-chart-card { padding: 18px 14px 14px; }
+  .detail-price strong { font-size: 32px; }
+  .detail-chart-wrap { height: 270px; }
+  .detail-rules { padding: 20px; }
+}

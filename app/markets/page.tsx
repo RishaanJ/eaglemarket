@@ -34,6 +34,7 @@ import { EagCoin } from "@/components/ui/eag-coin";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import { NotificationPanel } from "@/components/notification-panel";
 import { calculateProbability } from "@/lib/amm";
+import { marketSlug } from "@/lib/slug";
 import { useMarketData, type SyncedMarket } from "@/lib/use-market";
 
 const categoryIcons: Record<string, LucideIcon> = {
@@ -128,6 +129,11 @@ function MarketCard({
 
   const card = (
     <article className="market-card">
+      <Link
+        className="market-card-link"
+        href={`/markets/${marketSlug(market)}`}
+        aria-label={`Open market: ${market.question}`}
+      />
       <div className="market-card-top">
         <span className="category-label">{market.category.name}</span>
         <button className="watch-button" aria-label={`Watch ${market.question}`}>
@@ -273,7 +279,7 @@ export default function Home() {
   return (
     <div className="app-shell">
       <header className="topbar">
-        <Link className="wordmark" href="/">
+        <Link className="wordmark" href="/markets">
           <EagleMark />
           <span>EagleMarket</span>
         </Link>

@@ -24,17 +24,25 @@ interface MarketWithCategory extends MarketRow {
   categories: Pick<CategoryRow, "name" | "slug" | "color" | "icon_key">;
 }
 
-export function useMarketData() {
+/**
+ * `focusMarketId` selects which market the chart and price-history subscription follow.
+ * Omitted (the markets index) it falls back to the first market, matching the old behaviour.
+ */
+export function useMarketData(focusMarketId?: number) {
   const supabase = useMemo(() => createClient(), []);
   const [markets, setMarkets] = useState<SyncedMarket[]>([]);
   const [userBalance, setUserBalance] = useState(0);
-  const [chartData, setChartData] = useState<ChartDataPoint[]>([]);
+  // Tagged with its market so a pending fetch can never paint the previous market's chart.
+  const [chart, setChart] = useState<{ marketId: number | null; points: ChartDataPoint[] }>({
+    marketId: null,
+    points: [],
+  });
   const [userId, setUserId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [trading, setTrading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const pendingTrade = useRef<{ fingerprint: string; key: string } | null>(null);
-  const heroMarketId = markets[0]?.id;
+  const heroMarketId = focusMarketId ?? markets[0]?.id;
 
   const load = useCallback(async () => {
     setError(null);
@@ -74,25 +82,41 @@ export function useMarketData() {
 
     setUserBalance(Number(walletResult.data.balance));
     setMarkets(syncedMarkets);
+    setLoading(false);
+  }, [supabase]);
 
-    const hero = syncedMarkets[0];
-    if (hero) {
+  useEffect(() => {
+    queueMicrotask(() => void load());
+  }, [load]);
+
+  // Chart history is per-market, so it reloads whenever the focused market changes.
+  useEffect(() => {
+    const focused = markets.find((market) => market.id === heroMarketId);
+    if (!focused) return;
+
+    let cancelled = false;
+    void (async () => {
       const { data: history, error: historyError } = await supabase
         .from("market_price_history")
         .select("created_at, probability_yes")
-        .eq("market_id", hero.id)
+        .eq("market_id", focused.id)
         .order("created_at", { ascending: true })
         .limit(100);
+      if (cancelled) return;
 
       if (historyError) {
         setError(historyError.message);
-      } else {
-        const initialYes = Math.round(
-          calculateProbability(Number(hero.pool_yes), Number(hero.pool_no)) * 100,
-        );
-        const points: ChartDataPoint[] = [
+        return;
+      }
+
+      const initialYes = Math.round(
+        calculateProbability(Number(focused.pool_yes), Number(focused.pool_no)) * 100,
+      );
+      setChart({
+        marketId: focused.id,
+        points: [
           {
-            day: new Date(hero.opens_at).toLocaleDateString(undefined, {
+            day: new Date(focused.opens_at).toLocaleDateString(undefined, {
               month: "short",
               day: "numeric",
             }),
@@ -110,17 +134,14 @@ export function useMarketData() {
               no: 100 - yes,
             };
           }),
-        ];
-        setChartData(points);
-      }
-    }
+        ],
+      });
+    })();
 
-    setLoading(false);
-  }, [supabase]);
-
-  useEffect(() => {
-    queueMicrotask(() => void load());
-  }, [load]);
+    return () => { cancelled = true; };
+    // Only the identity of the focused market should retrigger a history fetch.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [heroMarketId, markets.length, supabase]);
 
   useEffect(() => {
     if (!userId) return;
@@ -174,7 +195,11 @@ export function useMarketData() {
             yes,
             no: 100 - yes,
           };
-          setChartData((current) => [...current.slice(-99), nextPoint]);
+          setChart((current) =>
+            current.marketId === point.market_id
+              ? { ...current, points: [...current.points.slice(-99), nextPoint] }
+              : current,
+          );
         },
       )
       .subscribe();
@@ -245,7 +270,10 @@ export function useMarketData() {
     [],
   );
 
-  const heroMarket = markets[0] ?? null;
+  const heroMarket = markets.find((market) => market.id === heroMarketId) ?? null;
+  const chartData = chart.marketId === heroMarketId ? chart.points : [];
+  const marketMissing =
+    focusMarketId !== undefined && !loading && !markets.some((m) => m.id === focusMarketId);
   const probYes = heroMarket
     ? Math.round(
         calculateProbability(Number(heroMarket.pool_yes), Number(heroMarket.pool_no)) * 100,
@@ -276,6 +304,7 @@ export function useMarketData() {
   return {
     markets,
     heroMarket,
+    marketMissing,
     probYes,
     probNo,
     userBalance,
