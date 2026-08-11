@@ -142,7 +142,13 @@ function MarketCard({
           <Bell size={16} />
         </button>
       </div>
-      <h3>{market.question}</h3>
+      {/* The heading is the link, so the Yes/No buttons below stay independently
+          clickable rather than being swallowed by a card-wide anchor. */}
+      <h3>
+        <Link className="market-card-link" href={`/markets/${market.id}`}>
+          {market.question}
+        </Link>
+      </h3>
       <div className="probability-row">
         <div>
           <strong>{probYes}%</strong>
@@ -348,7 +354,11 @@ export default function Home() {
         <MotionReveal>
         <section className="hero-market" id="markets">
           <div className="hero-copy">
-            <h1>{heroMarket.question}</h1>
+            <h1>
+              <Link className="market-card-link" href={`/markets/${heroMarket.id}`}>
+                {heroMarket.question}
+              </Link>
+            </h1>
             <p className="hero-description">
               {heroMarket.resolution_criteria}
             </p>
