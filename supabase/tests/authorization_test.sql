@@ -12,7 +12,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(19);
+select plan(27);
 
 -- ── Fixtures ────────────────────────────────────────────────────────────────
 -- Inserting into auth.users fires private.handle_new_user(), which provisions
@@ -217,6 +217,91 @@ select isnt(
      now(), now() + interval '7 days', 1000, 'draft')),
   null,
   'admin_create_market succeeds for an admin'
+);
+
+
+-- ── Announcements ───────────────────────────────────────────────────────────
+-- The banner is admin-authored but world-readable, so the boundary that
+-- matters is: students may read live rows only, and may not write at all.
+
+-- Seed one live and one hidden announcement as the admin.
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000002","role":"authenticated"}',
+  true
+);
+
+select lives_ok(
+  $$ select public.admin_create_announcement('Live announcement for tests', 'warning', null) $$,
+  'admin_create_announcement succeeds for an admin'
+);
+
+set local role postgres;
+insert into public.announcements (message, severity, is_active, created_by)
+values (
+  'Hidden announcement for tests',
+  'info',
+  false,
+  '00000000-0000-4000-8000-000000000002'
+);
+
+-- Now act as the student.
+set local role authenticated;
+select set_config(
+  'request.jwt.claims',
+  '{"sub":"00000000-0000-4000-8000-000000000001","role":"authenticated"}',
+  true
+);
+
+select throws_ok(
+  $$ select public.admin_list_announcements() $$,
+  '42501',
+  'Administrator access required',
+  'admin_list_announcements is denied for a student'
+);
+
+select throws_ok(
+  $$ select public.admin_create_announcement('Student wrote this', 'emergency', null) $$,
+  '42501',
+  'Administrator access required',
+  'admin_create_announcement is denied for a student'
+);
+
+select throws_ok(
+  $$ select public.admin_update_announcement(1, 'Student edit', 'info', true, null) $$,
+  '42501',
+  'Administrator access required',
+  'admin_update_announcement is denied for a student'
+);
+
+select throws_ok(
+  $$ select public.admin_delete_announcement(1) $$,
+  '42501',
+  'Administrator access required',
+  'admin_delete_announcement is denied for a student'
+);
+
+-- RLS: the live row is visible, the inactive one is not.
+select is(
+  (select count(*)::int from public.announcements),
+  1,
+  'A student sees only live announcements through RLS'
+);
+
+select is(
+  (select message from public.announcements),
+  'Live announcement for tests',
+  'The row a student can see is the live one'
+);
+
+-- Direct writes are refused even though the table is readable.
+select throws_ok(
+  $$ insert into public.announcements (message, severity, created_by)
+     values ('Direct insert', 'info', '00000000-0000-4000-8000-000000000001') $$,
+  '42501',
+  null,
+  'A student cannot insert announcements directly'
 );
 
 select * from finish();

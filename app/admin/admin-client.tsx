@@ -19,6 +19,7 @@ import { useMemo, useState, type FormEvent } from "react";
 import { EagCoin } from "@/components/ui/eag-coin";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import { createClient } from "@/lib/supabase/client";
+import { AnnouncementsPanel, type AdminAnnouncement } from "./announcements-panel";
 import { NotificationPanel } from "@/components/notification-panel";
 
 export type AdminCategory = { id: number; name: string; color: string };
@@ -86,11 +87,13 @@ export default function AdminClient({
   displayName,
   markets,
   categories,
+  announcements,
 }: {
   balance: number;
   displayName: string;
   markets: AdminMarket[];
   categories: AdminCategory[];
+  announcements: AdminAnnouncement[];
 }) {
   const router = useRouter();
   const [query, setQuery] = useState("");
@@ -270,6 +273,8 @@ export default function AdminClient({
         )}
 
         <MotionReveal delay={0.1}>
+        <AnnouncementsPanel announcements={announcements} />
+
         <section className="admin-market-section">
           <div className="admin-section-heading"><div><h2>All markets</h2><span>{visibleMarkets.length} shown</span></div><div className="admin-filters">{(["all", "draft", "open", "closed", "resolved"] as StatusFilter[]).map((status) => <button className={filter === status ? "active" : ""} onClick={() => setFilter(status)} key={status}>{status}</button>)}</div></div>
           <div className="admin-market-list">
