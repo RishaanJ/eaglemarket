@@ -1,9 +1,9 @@
 -- Site-wide announcement banner.
 --
--- One admin-authored message shown at the top of the app. Reads are open to
--- everyone but scoped by RLS to announcements that are currently live; writes
--- are admin-only and go exclusively through the security-definer RPCs below,
--- so no client ever holds direct write privileges on the table.
+-- One admin-authored message shown at the top of the app. Signed-in users can
+-- read only announcements that are currently live; writes are admin-only and go
+-- exclusively through the security-definer RPCs below, so no client ever holds
+-- direct write privileges on the table.
 
 create table public.announcements (
   id bigint generated always as identity primary key,
@@ -36,17 +36,21 @@ create index announcements_created_by_idx on public.announcements (created_by);
 
 alter table public.announcements enable row level security;
 
--- Readable by anyone, but only while the announcement is actually live. An
+-- Readable by any signed-in user, but only while the announcement is live. An
 -- inactive or expired row is invisible to clients even if its id is known;
 -- admins see the full list through admin_list_announcements() instead.
 create policy announcements_public_read on public.announcements
   for select
-  to anon, authenticated
+  to authenticated
   using (
     is_active
     and starts_at <= now()
     and (ends_at is null or ends_at > now())
   );
+
+-- RLS decides which rows are visible; this grant decides whether the role may
+-- read the table at all. Both are required.
+grant select on public.announcements to authenticated;
 
 -- No insert/update/delete policies: writes are RPC-only, by design.
 
@@ -64,14 +68,17 @@ returns table (
   updated_at timestamptz,
   is_live boolean
 )
-language sql
+language plpgsql
 stable
 security definer
 set search_path = ''
 as $$
-  with authorized as (
-    select private.require_admin() as user_id
-  )
+begin
+  -- Must be a statement, not a cross-joined CTE: the planner is free to drop an
+  -- unreferenced CTE, which would silently skip the authorization check.
+  perform private.require_admin();
+
+  return query
   select
     a.id,
     a.message,
@@ -83,8 +90,8 @@ as $$
     a.updated_at,
     (a.is_active and a.starts_at <= now() and (a.ends_at is null or a.ends_at > now())) as is_live
   from public.announcements a
-  cross join authorized
   order by a.created_at desc;
+end;
 $$;
 
 create or replace function public.admin_create_announcement(
