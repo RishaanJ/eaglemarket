@@ -66,7 +66,7 @@ export default function RankingsClient({
   return (
     <div className="app-shell rankings-shell">
       <header className="topbar">
-        <Link className="wordmark" href="/">
+        <Link className="wordmark" href="/markets">
           <EagleMark />
           <span>EagleMarket</span>
         </Link>

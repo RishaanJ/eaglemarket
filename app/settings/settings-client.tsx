@@ -118,7 +118,7 @@ export default function SettingsClient({
   return (
     <div className="app-shell settings-shell">
       <header className="topbar">
-        <Link className="wordmark" href="/">
+        <Link className="wordmark" href="/markets">
           <EagleMark />
           <span>EagleMarket</span>
         </Link>
