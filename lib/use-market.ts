@@ -56,7 +56,11 @@ export function useMarketData(focusMarketId?: number) {
       // stopping leaves the stale cookie in place, so every reload lands on the
       // same dead page. Clearing it and sending them to sign-in is what
       // actually unsticks the browser.
-      await supabase.auth.signOut();
+      // scope: "local" clears the stored session without asking the server to
+      // revoke it. A default signOut round-trips, and that call can fail for a
+      // user that no longer exists — which is precisely the case here, and
+      // would leave the dead token in place.
+      await supabase.auth.signOut({ scope: "local" });
       router.push("/auth");
       return;
     }
