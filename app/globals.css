@@ -1055,3 +1055,10 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
   .announcement-list li { flex-wrap: wrap; }
   .announcement-list li > div { flex: 1 0 100%; order: 3; }
 }
+
+.referral-link-row { flex-wrap: wrap; gap: 10px; }
+.referral-link-controls { display: flex; align-items: center; gap: 7px; flex: 1 1 260px; min-width: 0; }
+.referral-link-controls input { flex: 1 1 auto; min-width: 0; padding: 7px 10px; border: 1px solid var(--border); border-radius: 8px; background: transparent; font-size: 12px; color: inherit; }
+.referral-link-controls button { display: inline-flex; align-items: center; gap: 5px; padding: 7px 11px; border: 1px solid var(--border); border-radius: 8px; background: transparent; font-size: 12px; font-weight: 600; color: inherit; cursor: pointer; white-space: nowrap; }
+.referral-link-controls button:hover { border-color: color-mix(in oklch, currentColor 35%, transparent); }
+.referral-earned { font-size: 12px; font-weight: 600; white-space: nowrap; }
