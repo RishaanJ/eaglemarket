@@ -29,7 +29,7 @@ export default function CheckEmailPage() {
         </div>
 
         <p className={styles.eyebrow}>ONE MORE STEP</p>
-        <h1 id="check-email-heading">Check your email.</h1>
+        <h1 id="check-email-heading">Check your email. (check your spam)</h1>
         <p className={styles.description}>
           We sent a confirmation link to your school email. Open it to verify your account and
           we&apos;ll take you straight to the markets.
