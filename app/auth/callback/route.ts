@@ -1,22 +1,8 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
+import { safeNextPath } from "@/lib/security/next-path";
 import { createClient } from "@/lib/supabase/server";
 
-const AUTH_DESTINATIONS = new Set(["/markets", "/picks", "/rankings", "/settings", "/admin"]);
-
-function safeNextPath(value: string | null) {
-  if (!value || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) return "/markets";
-
-  try {
-    const base = new URL("https://eaglemarket.invalid");
-    const destination = new URL(value, base);
-    return destination.origin === base.origin && AUTH_DESTINATIONS.has(destination.pathname)
-      ? destination.pathname
-      : "/markets";
-  } catch {
-    return "/markets";
-  }
-}
 
 function redirectResponse(path: string) {
   return new NextResponse(null, {

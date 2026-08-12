@@ -415,6 +415,7 @@ export type Database = {
         Row: {
           average_price: number;
           created_at: string;
+          direction: string;
           id: number;
           market_id: number;
           outcome: string;
@@ -433,6 +434,7 @@ export type Database = {
         Insert: {
           average_price: number;
           created_at?: string;
+          direction?: string;
           id?: never;
           market_id: number;
           outcome: string;
@@ -451,6 +453,7 @@ export type Database = {
         Update: {
           average_price?: number;
           created_at?: string;
+          direction?: string;
           id?: never;
           market_id?: number;
           outcome?: string;
@@ -734,6 +737,31 @@ export type Database = {
           resolved_picks: number;
           total_picks: number;
           wins: number;
+        }[];
+      };
+      submit_sell: {
+        Args: {
+          p_idempotency_key: string;
+          p_market_id: number;
+          p_min_proceeds?: number;
+          p_outcome: string;
+          p_shares: number;
+        };
+        Returns: {
+          average_price: number;
+          balance: number;
+          fee_amount: number;
+          market_id: number;
+          pool_no: number;
+          pool_yes: number;
+          probability_no: number;
+          probability_yes: number;
+          proceeds: number;
+          remaining_no_shares: number;
+          remaining_yes_shares: number;
+          shares_sold: number;
+          total_volume: number;
+          trade_id: number;
         }[];
       };
       submit_trade: {
