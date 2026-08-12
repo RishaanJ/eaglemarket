@@ -7,7 +7,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(9);
+select plan(12);
 
 -- A school address is accepted and provisioned as normal.
 select lives_ok(
@@ -77,6 +77,45 @@ select throws_ok(
   '42501',
   null,
   'an existing account cannot move to an outside address'
+);
+
+
+-- ── Signing in must not re-run the rule ─────────────────────────────────────
+-- The trigger fires on `update of email`, which Postgres raises whenever the
+-- column is in an UPDATE's SET list even if the value is identical. Supabase
+-- writes to auth.users on every sign-in, so without the unchanged-address
+-- guard these three cases lock out every account that predates the rule.
+
+-- A school account being re-written with the same address (a sign-in).
+select lives_ok(
+  $$ update auth.users
+     set email = 'student@fusdk12.net', updated_at = now()
+     where email = 'student@fusdk12.net' $$,
+  'Re-writing an unchanged school address succeeds'
+);
+
+-- An account that predates the rule. Inserted past the trigger, which is
+-- exactly the state a grandfathered user is in.
+alter table auth.users disable trigger enforce_school_email_domain;
+insert into auth.users (id, email, email_confirmed_at)
+values ('00000000-0000-4000-8000-0000000000f1', 'legacy@gmail.com', now());
+alter table auth.users enable trigger enforce_school_email_domain;
+
+select lives_ok(
+  $$ update auth.users
+     set email = 'legacy@gmail.com', updated_at = now()
+     where id = '00000000-0000-4000-8000-0000000000f1' $$,
+  'A pre-existing off-domain account can still sign in'
+);
+
+-- But it still cannot move to another off-domain address.
+select throws_ok(
+  $$ update auth.users
+     set email = 'legacy@outlook.com'
+     where id = '00000000-0000-4000-8000-0000000000f1' $$,
+  '42501',
+  null,
+  'A pre-existing account still cannot change to another off-domain address'
 );
 
 select * from finish();
