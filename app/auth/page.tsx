@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { DEFAULT_NEXT_PATH, safeNextPath } from "@/lib/security/next-path";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
+import { REFERRAL_QUERY_PARAM, safeReferralCode } from "@/lib/security/referral-code";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import {
@@ -41,6 +42,18 @@ function BrandMark() {
 function currentNextPath() {
   if (typeof window === "undefined") return DEFAULT_NEXT_PATH;
   return safeNextPath(new URLSearchParams(window.location.search).get("next"));
+}
+
+/**
+ * The referral code from the invite link, if the URL carries a well-formed one.
+ * Read at call time rather than held in state: it is only needed inside event
+ * handlers, and reading it during render would break server rendering.
+ */
+function currentReferralCode() {
+  if (typeof window === "undefined") return null;
+  return safeReferralCode(
+    new URLSearchParams(window.location.search).get(REFERRAL_QUERY_PARAM),
+  );
 }
 
 export default function AuthPage() {
@@ -83,6 +96,12 @@ export default function AuthPage() {
     const callbackUrl = new URL("/auth/callback", window.location.origin);
     callbackUrl.searchParams.set("next", currentNextPath());
     if (mode === "signup") callbackUrl.searchParams.set("legal", LEGAL_POLICY_VERSION);
+    // Google discards our own query string, but returns the callback URL we
+    // hand it intact — the same route `next` and `legal` already travel.
+    const oauthReferral = currentReferralCode();
+    if (mode === "signup" && oauthReferral) {
+      callbackUrl.searchParams.set(REFERRAL_QUERY_PARAM, oauthReferral);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo: callbackUrl.toString() },
@@ -150,6 +169,10 @@ export default function AuthPage() {
           options: {
             data: {
               full_name: fullName,
+              // Read by the on_auth_user_created_referral trigger, which
+              // creates the pending referral row automatically — so a user who
+              // trades before ever "entering a code" is still matched.
+              ...(currentReferralCode() ? { referral_code: currentReferralCode() } : {}),
               terms_accepted_at: consentAcceptedAt,
               privacy_accepted_at: consentAcceptedAt,
               age_13_confirmed_at: consentAcceptedAt,

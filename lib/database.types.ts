@@ -411,6 +411,95 @@ export type Database = {
         };
         Relationships: [];
       };
+      referral_allowed_domains: {
+        Row: {
+          created_at: string;
+          domain: string;
+        };
+        Insert: {
+          created_at?: string;
+          domain: string;
+        };
+        Update: {
+          created_at?: string;
+          domain?: string;
+        };
+        Relationships: [];
+      };
+      referral_codes: {
+        Row: {
+          code: string;
+          created_at: string;
+          user_id: string;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          user_id: string;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "referral_codes_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
+      referrals: {
+        Row: {
+          code: string;
+          created_at: string;
+          id: number;
+          paid_at: string | null;
+          referred_email_normalized: string | null;
+          referred_id: string;
+          referrer_id: string;
+          status: string;
+        };
+        Insert: {
+          code: string;
+          created_at?: string;
+          id?: never;
+          paid_at?: string | null;
+          referred_email_normalized?: string | null;
+          referred_id: string;
+          referrer_id: string;
+          status?: string;
+        };
+        Update: {
+          code?: string;
+          created_at?: string;
+          id?: never;
+          paid_at?: string | null;
+          referred_email_normalized?: string | null;
+          referred_id?: string;
+          referrer_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "referrals_referred_id_fkey";
+            columns: ["referred_id"];
+            isOneToOne: true;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+          {
+            foreignKeyName: "referrals_referrer_id_fkey";
+            columns: ["referrer_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["user_id"];
+          },
+        ];
+      };
       trades: {
         Row: {
           average_price: number;
@@ -549,6 +638,7 @@ export type Database = {
           balance: number;
           lifetime_earned: number;
           lifetime_spent: number;
+          referral_earned: number;
           updated_at: string;
           user_id: string;
         };
@@ -556,6 +646,7 @@ export type Database = {
           balance?: number;
           lifetime_earned?: number;
           lifetime_spent?: number;
+          referral_earned?: number;
           updated_at?: string;
           user_id: string;
         };
@@ -563,6 +654,7 @@ export type Database = {
           balance?: number;
           lifetime_earned?: number;
           lifetime_spent?: number;
+          referral_earned?: number;
           updated_at?: string;
           user_id?: string;
         };
@@ -700,6 +792,10 @@ export type Database = {
           total_payout: number;
         }[];
       };
+      admin_set_referral_domains: {
+        Args: { p_domains: string[] };
+        Returns: string[];
+      };
       admin_set_market_status: {
         Args: {
           p_market_id: number;
@@ -721,6 +817,20 @@ export type Database = {
           shares_received: number;
           total_volume: number;
           trade_id: number;
+        }[];
+      };
+      get_my_referral_code: { Args: never; Returns: string };
+      get_my_referral_stats: {
+        Args: never;
+        Returns: {
+          cap: number;
+          code: string;
+          paid_count: number;
+          pending_count: number;
+          program_enabled: boolean;
+          referral_earned: number;
+          referred_bonus_paid: boolean;
+          referred_by_display_name: string;
         }[];
       };
       get_rankings: {
