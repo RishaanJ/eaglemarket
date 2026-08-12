@@ -83,6 +83,53 @@ export function calculatePurchaseOutput(
 }
 
 /**
+ * Proceeds from selling shares back into the pool — the mirror of
+ * calculatePurchaseOutput, and the client-side twin of submit_sell.
+ *
+ * Selling `sharesToSell` returns `r` tokens, chosen so the constant product
+ * survives: (poolYes + s - r)(poolNo - r) = k when selling YES. That is a
+ * quadratic in r whose smaller root always lies strictly inside (0, poolNo),
+ * so both pools stay positive.
+ *
+ * Intentionally not rounded to four decimals the way the buy helpers are:
+ * positions carry eight, and rounding a holding up would make it impossible
+ * to close a position. Round for display only.
+ */
+export function calculateSaleOutput(
+  sharesToSell: number,
+  poolYes: number,
+  poolNo: number,
+  isSellingYes: boolean
+): { proceeds: number; newPoolYes: number; newPoolNo: number; avgPrice: number } {
+  const unchanged = {
+    proceeds: 0,
+    newPoolYes: poolYes,
+    newPoolNo: poolNo,
+    avgPrice: 0,
+  };
+
+  if (sharesToSell <= 0 || poolYes <= 0 || poolNo <= 0) return unchanged;
+
+  const sum = poolYes + poolNo + sharesToSell;
+  const discriminant =
+    sum * sum - 4 * sharesToSell * (isSellingYes ? poolNo : poolYes);
+  if (discriminant < 0) return unchanged;
+
+  const proceeds = (sum - Math.sqrt(discriminant)) / 2;
+
+  const newPoolYes = isSellingYes
+    ? poolYes + sharesToSell - proceeds
+    : poolYes - proceeds;
+  const newPoolNo = isSellingYes
+    ? poolNo - proceeds
+    : poolNo + sharesToSell - proceeds;
+
+  if (proceeds <= 0 || newPoolYes <= 0 || newPoolNo <= 0) return unchanged;
+
+  return { proceeds, newPoolYes, newPoolNo, avgPrice: proceeds / sharesToSell };
+}
+
+/**
  * Determines the price impact (slippage percentage) of the trade to display to the user.
  */
 export function calculateSlippage(
