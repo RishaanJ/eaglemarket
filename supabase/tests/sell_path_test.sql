@@ -16,8 +16,8 @@ select plan(25);
 
 insert into auth.users (id, email)
 values
-  ('00000000-0000-4000-8000-00000000000a', 'seller@example.test'),
-  ('00000000-0000-4000-8000-00000000000b', 'other@example.test');
+  ('00000000-0000-4000-8000-00000000000a', 'seller@fusdk12.net'),
+  ('00000000-0000-4000-8000-00000000000b', 'other@fusdk12.net');
 
 update public.profiles set role = 'admin'
 where user_id = '00000000-0000-4000-8000-00000000000b';

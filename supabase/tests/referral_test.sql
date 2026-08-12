@@ -6,7 +6,7 @@ begin;
 
 create extension if not exists pgtap;
 
-select plan(34);
+select plan(33);
 
 -- ── Fixtures ────────────────────────────────────────────────────────────────
 -- Emails are chosen to exercise the normalisation rules: the alice variants all
@@ -14,12 +14,11 @@ select plan(34);
 
 insert into auth.users (id, email, email_confirmed_at)
 values
-  ('00000000-0000-4000-8000-0000000000a1', 'referrer@school.test', now()),
-  ('00000000-0000-4000-8000-0000000000a2', 'alice@school.test', now()),
-  ('00000000-0000-4000-8000-0000000000a3', 'al.ice+spring@school.test', now()),
-  ('00000000-0000-4000-8000-0000000000a4', 'unconfirmed@school.test', null),
-  ('00000000-0000-4000-8000-0000000000a5', 'outsider@gmail.test', now()),
-  ('00000000-0000-4000-8000-0000000000a6', 'admin@school.test', now());
+  ('00000000-0000-4000-8000-0000000000a1', 'referrer@fusdk12.net', now()),
+  ('00000000-0000-4000-8000-0000000000a2', 'alice@fusdk12.net', now()),
+  ('00000000-0000-4000-8000-0000000000a3', 'al.ice+spring@fusdk12.net', now()),
+  ('00000000-0000-4000-8000-0000000000a4', 'unconfirmed@fusdk12.net', null),
+  ('00000000-0000-4000-8000-0000000000a6', 'admin@fusdk12.net', now());
 
 update public.profiles set role = 'admin'
 where user_id = '00000000-0000-4000-8000-0000000000a6';
@@ -180,7 +179,7 @@ select is(
 );
 
 -- Switch the program on.
-insert into public.referral_allowed_domains (domain) values ('school.test');
+insert into public.referral_allowed_domains (domain) values ('fusdk12.net');
 
 -- Gate: unconfirmed email must not pay.
 insert into public.referrals (referrer_id, referred_id, code)
@@ -196,19 +195,10 @@ select is(
   'an unconfirmed email does not pay'
 );
 
--- Gate: off-domain address must not pay.
-insert into public.referrals (referrer_id, referred_id, code)
-values ('00000000-0000-4000-8000-0000000000a1',
-        '00000000-0000-4000-8000-0000000000a5', 'OUTSIDER');
-
-select private.credit_referral('00000000-0000-4000-8000-0000000000a5');
-
-select is(
-  (select status from public.referrals
-   where referred_id = '00000000-0000-4000-8000-0000000000a5'),
-  'pending',
-  'an email outside the allowlisted domain does not pay'
-);
+-- The off-domain payout gate is no longer reachable from here: since the
+-- school-domain trigger, an account outside @fusdk12.net cannot be created at
+-- all, so there is no user to attach such a referral to. The allowlist gate
+-- itself is still covered by the empty-allowlist case above.
 
 -- ── A legitimate payout ─────────────────────────────────────────────────────
 
@@ -325,7 +315,7 @@ begin
   for i in 1..6 loop
     v_id := ('00000000-0000-4000-8000-0000000000c' || i::text)::uuid;
     insert into auth.users (id, email, email_confirmed_at)
-    values (v_id, 'capped' || i::text || '@school.test', now());
+    values (v_id, 'capped' || i::text || '@fusdk12.net', now());
     insert into public.referrals (referrer_id, referred_id, code)
     values ('00000000-0000-4000-8000-0000000000a1', v_id, 'CAPTEST' || i::text);
     perform private.credit_referral(v_id);
