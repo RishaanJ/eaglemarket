@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { calculateProbability, calculatePurchaseOutput, calculateSlippage } from "./amm";
 import { createClient } from "./supabase/client";
@@ -29,6 +30,7 @@ interface MarketWithCategory extends MarketRow {
  * Omitted (the markets index) it falls back to the first market, matching the old behaviour.
  */
 export function useMarketData(focusMarketId?: number) {
+  const router = useRouter();
   const supabase = useMemo(() => createClient(), []);
   const [markets, setMarkets] = useState<SyncedMarket[]>([]);
   const [userBalance, setUserBalance] = useState(0);
@@ -49,8 +51,13 @@ export function useMarketData(focusMarketId?: number) {
 
     const { data: authData, error: authError } = await supabase.auth.getUser();
     if (authError || !authData.user) {
-      setError("Your session has expired. Please log in again.");
-      setLoading(false);
+      // The stored token can outlive the account it points at — an expired
+      // session, or a user removed from auth.users. Showing a message and
+      // stopping leaves the stale cookie in place, so every reload lands on the
+      // same dead page. Clearing it and sending them to sign-in is what
+      // actually unsticks the browser.
+      await supabase.auth.signOut();
+      router.push("/auth");
       return;
     }
     setUserId(authData.user.id);
@@ -83,7 +90,7 @@ export function useMarketData(focusMarketId?: number) {
     setUserBalance(Number(walletResult.data.balance));
     setMarkets(syncedMarkets);
     setLoading(false);
-  }, [supabase]);
+  }, [router, supabase]);
 
   useEffect(() => {
     queueMicrotask(() => void load());
