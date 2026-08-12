@@ -153,12 +153,12 @@ export function useMarketData(focusMarketId?: number) {
 
   // Fetch position for focused market
   useEffect(() => {
-    if (!userId || !heroMarketId) {
-      setUserPosition(null);
-      return;
-    }
     let cancelled = false;
     void (async () => {
+      if (!userId || !heroMarketId) {
+        if (!cancelled) setUserPosition(null);
+        return;
+      }
       const { data } = await supabase
         .from("positions")
         .select("yes_shares, no_shares, total_invested, cashed_out_at")
