@@ -20,7 +20,7 @@ set role = 'admin'
 where user_id = '00000000-0000-4000-8000-00000000000c';
 
 -- Market 1: Open market
-insert into public.markets (
+insert into public.markets overriding system value (
   id, category_id, question, resolution_criteria, status, opens_at, closes_at, created_by, pool_yes, pool_no
 )
 select
@@ -29,7 +29,7 @@ select
 from public.categories where categories.slug = 'classes';
 
 -- Market 2: Closed market
-insert into public.markets (
+insert into public.markets overriding system value (
   id, category_id, question, resolution_criteria, status, opens_at, closes_at, created_by, pool_yes, pool_no
 )
 select
