@@ -2,10 +2,11 @@ name: CI
 
 on:
   pull_request:
-    branches: [main]
-  # Also run on pushes to main so the branch always has a known-good status.
+    branches: [main, dev]
+  # Also run on pushes to the long-lived branches so each always has a known-good
+  # status. dev is the integration branch that feature work lands on first.
   push:
-    branches: [main]
+    branches: [main, dev]
 
 permissions:
   contents: read
