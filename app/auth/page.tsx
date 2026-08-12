@@ -8,6 +8,7 @@ import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/client";
+import { SCHOOL_EMAIL_DOMAIN, SCHOOL_EMAIL_ERROR, isSchoolEmail } from "@/lib/school-domain";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import {
   TurnstileWidget,
@@ -69,7 +70,13 @@ export default function AuthPage() {
     if (mode === "signup") callbackUrl.searchParams.set("legal", LEGAL_POLICY_VERSION);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callbackUrl.toString() },
+      options: {
+        redirectTo: callbackUrl.toString(),
+        // Asks Google to show only school accounts in the picker. This is a
+        // request to Google, not enforcement — the database trigger is what
+        // actually rejects an outside address.
+        queryParams: { hd: SCHOOL_EMAIL_DOMAIN },
+      },
     });
 
     if (error) {
@@ -118,6 +125,14 @@ export default function AuthPage() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("name") ?? "").trim();
+
+    // Checked again in the database; this is only so the message is a sentence
+    // rather than a constraint violation.
+    if (!isSchoolEmail(email)) {
+      setMessage({ type: "error", text: SCHOOL_EMAIL_ERROR });
+      setPending(false);
+      return;
+    }
     const supabase = createClient();
     const confirmationUrl = new URL("/auth/confirm", window.location.origin);
     const consentAcceptedAt = new Date().toISOString();
@@ -219,7 +234,7 @@ export default function AuthPage() {
 
               <label>
                 <span>School email</span>
-                <input name="email" type="email" autoComplete="email" placeholder="you@school.org" required />
+                <input name="email" type="email" autoComplete="email" placeholder="you@fusdk12.net" required />
               </label>
 
               <label>

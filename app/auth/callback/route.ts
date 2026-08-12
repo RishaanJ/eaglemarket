@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
 import { createClient } from "@/lib/supabase/server";
+import { SCHOOL_EMAIL_DOMAIN } from "@/lib/school-domain";
 
 const AUTH_DESTINATIONS = new Set(["/markets", "/picks", "/rankings", "/settings", "/admin"]);
 
@@ -68,6 +69,19 @@ export async function GET(request: NextRequest) {
     }
 
     console.error("OAuth code exchange failed", { code: error.code });
+
+    // A Google account outside the school domain is refused by the database
+    // trigger, which surfaces here as a generic exchange failure. Say what
+    // actually happened instead of "please try again", which would send
+    // someone into a loop that cannot succeed.
+    if (/school email|fusdk12/i.test(error.message ?? "")) {
+      return redirectResponse(
+        `/auth?error=${encodeURIComponent(
+          `Use your @${SCHOOL_EMAIL_DOMAIN} school account. Other Google accounts can't be used to sign in.`,
+        )}`,
+      );
+    }
+
     return redirectResponse("/auth?error=We%20couldn%27t%20complete%20sign%20in.%20Please%20try%20again.");
   }
 
