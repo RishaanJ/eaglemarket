@@ -685,11 +685,11 @@ h1 { max-width: 15ch; margin: 26px 0 14px; font-family: var(--font-roboto-conden
 .watch-button { margin-left: auto; padding: 5px; border: 0; background: none; color: var(--muted); }
 .watch-button:hover { color: var(--primary-dark); }
 .market-card h3 { position: relative; z-index: 2; max-width: 18ch; min-height: 88px; margin: 25px 0 22px; font-family: var(--font-roboto-condensed), sans-serif; font-size: 28px; font-weight: 650; line-height: 1.04; letter-spacing: -.022em; text-wrap: balance; }
-.market-card-link { color: inherit; text-decoration: none; }
-.market-card-link:hover { text-decoration: underline; text-underline-offset: 3px; }
-/* Widen the hit target to the card without wrapping the Yes/No buttons in an
-   anchor, which would make them unreachable by keyboard and screen readers. */
-.market-card-link::after { content: ""; position: absolute; inset: 0; z-index: 1; }
+/* The card's hit target is a single empty anchor stretched over the card; see
+   .market-card-link below. It is a sibling of the Yes/No buttons rather than a
+   wrapper, so those stay reachable by keyboard and screen readers. */
+.hero-title-link { color: inherit; text-decoration: none; }
+.hero-title-link:hover { text-decoration: underline; text-underline-offset: 3px; }
 .market-card .trade-row, .market-card .watch-button { position: relative; z-index: 2; }
 .probability-row { position: relative; z-index: 2; display: flex; align-items: end; justify-content: space-between; }
 .probability-row > div { display: flex; align-items: baseline; gap: 5px; }

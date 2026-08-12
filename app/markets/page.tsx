@@ -349,7 +349,7 @@ export default function Home() {
         <section className="hero-market" id="markets">
           <div className="hero-copy">
             <h1>
-              <Link className="market-card-link" href={`/markets/${marketSlug(heroMarket)}`}>
+              <Link className="hero-title-link" href={`/markets/${marketSlug(heroMarket)}`}>
                 {heroMarket.question}
               </Link>
             </h1>
