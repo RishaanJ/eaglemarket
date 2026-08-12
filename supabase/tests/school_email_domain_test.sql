@@ -96,10 +96,13 @@ select lives_ok(
 
 -- An account that predates the rule. Inserted past the trigger, which is
 -- exactly the state a grandfathered user is in.
-alter table auth.users disable trigger enforce_school_email_domain;
+-- auth.users is owned by supabase_auth_admin, so ALTER TABLE ... DISABLE
+-- TRIGGER is not available here. session_replication_role suppresses user
+-- triggers for this statement without needing ownership of the table.
+set local session_replication_role = replica;
 insert into auth.users (id, email, email_confirmed_at)
 values ('00000000-0000-4000-8000-0000000000f1', 'legacy@gmail.com', now());
-alter table auth.users enable trigger enforce_school_email_domain;
+set local session_replication_role = origin;
 
 select lives_ok(
   $$ update auth.users
