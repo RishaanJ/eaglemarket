@@ -1,8 +1,8 @@
 ![logo](https://i.imgur.com/wM8Vdu8.png)
 
-EagleMarket is a school prediction-market interface for questions students are already discussing: test averages, game results, SPW outcomes, club events, and other campus moments.
+EagleMarket is a school prediction-market interface for questions students are already discussing: game results, Spirit Week outcomes, club events, and other campus moments.
 
-Markets use free play tokens with no cash value. Tokens cannot be purchased, withdrawn, exchanged for prizes, or converted into money.
+Markets use free play EAG tokens with no cash value. Tokens cannot be purchased, withdrawn, exchanged for prizes, or converted into money.
 
 ## Routes
 
