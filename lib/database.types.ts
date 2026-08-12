@@ -338,6 +338,7 @@ export type Database = {
       };
       positions: {
         Row: {
+          cashed_out_at: string | null;
           market_id: number;
           no_shares: number;
           total_invested: number;
@@ -346,6 +347,7 @@ export type Database = {
           yes_shares: number;
         };
         Insert: {
+          cashed_out_at?: string | null;
           market_id: number;
           no_shares?: number;
           total_invested?: number;
@@ -354,6 +356,7 @@ export type Database = {
           yes_shares?: number;
         };
         Update: {
+          cashed_out_at?: string | null;
           market_id?: number;
           no_shares?: number;
           total_invested?: number;
@@ -415,6 +418,7 @@ export type Database = {
         Row: {
           average_price: number;
           created_at: string;
+          direction: string;
           id: number;
           market_id: number;
           outcome: string;
@@ -433,6 +437,7 @@ export type Database = {
         Insert: {
           average_price: number;
           created_at?: string;
+          direction?: string;
           id?: never;
           market_id: number;
           outcome: string;
@@ -451,6 +456,7 @@ export type Database = {
         Update: {
           average_price?: number;
           created_at?: string;
+          direction?: string;
           id?: never;
           market_id?: number;
           outcome?: string;
@@ -734,6 +740,25 @@ export type Database = {
           resolved_picks: number;
           total_picks: number;
           wins: number;
+        }[];
+      };
+      submit_cashout: {
+        Args: {
+          p_idempotency_key: string;
+          p_market_id: number;
+        };
+        Returns: {
+          balance: number;
+          market_id: number;
+          no_shares_burned: number;
+          pool_no: number;
+          pool_yes: number;
+          probability_no: number;
+          probability_yes: number;
+          proceeds: number;
+          total_volume: number;
+          trade_id: number;
+          yes_shares_burned: number;
         }[];
       };
       submit_trade: {

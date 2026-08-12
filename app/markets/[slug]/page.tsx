@@ -12,12 +12,14 @@ import {
 import {
   ArrowLeft,
   ArrowRight,
+  AlertCircle,
   CalendarDays,
   Check,
   ChevronDown,
   Clock3,
   FlaskConical,
   LoaderCircle,
+  LogOut,
   Menu,
   Mic2,
   Search,
@@ -94,6 +96,7 @@ export default function MarketDetailPage() {
   const [amountInput, setAmountInput] = useState("10");
   const [mobileOpen, setMobileOpen] = useState(false);
   const [confirmed, setConfirmed] = useState(false);
+  const [cashoutConfirming, setCashoutConfirming] = useState(false);
 
   const {
     markets,
@@ -102,6 +105,7 @@ export default function MarketDetailPage() {
     probYes,
     probNo,
     userBalance,
+    userPosition,
     chartData,
     loading,
     trading,
@@ -109,6 +113,7 @@ export default function MarketDetailPage() {
     preview,
     previewSlippage,
     executeTrade,
+    executeCashout,
   } = useMarketData(marketId ?? undefined);
 
   const numericAmount = parseFloat(amountInput) || 0;
@@ -393,11 +398,77 @@ export default function MarketDetailPage() {
                   </>
                 )}
                 </button>
-                <p>
-                EAG are free tokens with no cash value. Correct picks settle at 100 EAG per
-                contract.
-                </p>
             </div>
+
+            {userPosition && (userPosition.total_invested > 0 || userPosition.cashed_out_at) && (
+              <div className="order-panel detail-order-panel mt-6">
+                <div className="order-title">
+                  <span>One-time Cash Out</span>
+                  <span>Position</span>
+                </div>
+                {userPosition.cashed_out_at ? (
+                  <div className="p-3 bg-slate-100 rounded-lg text-sm text-slate-600 mt-2">
+                    <Check className="inline-block mr-1 text-emerald-600" size={16} />
+                    You cashed out of this market on{" "}
+                    {new Date(userPosition.cashed_out_at).toLocaleDateString(undefined, {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}.
+                  </div>
+                ) : (
+                  <>
+                    <div className="order-summary mt-2">
+                      <span>Original investment</span>
+                      <strong>{userPosition.total_invested.toLocaleString()} EAG</strong>
+                    </div>
+                    <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-md mt-2 border border-amber-200">
+                      <AlertCircle className="inline-block mr-1 -mt-0.5" size={14} />
+                      This is a one-time, irreversible action. You will receive your original investment back and forfeit any potential winnings.
+                    </p>
+                    {market.status !== "open" || new Date(market.closes_at) <= new Date() ? (
+                      <button className="review-button mt-3" disabled>
+                        Market is no longer open for cash out
+                      </button>
+                    ) : cashoutConfirming ? (
+                      <div className="flex gap-2 mt-3">
+                        <button
+                          className="review-button flex-1"
+                          style={{ background: "#dc2626", color: "#ffffff" }}
+                          onClick={async () => {
+                            const ok = await executeCashout(market.id);
+                            if (ok) {
+                              setCashoutConfirming(false);
+                            }
+                          }}
+                          disabled={trading}
+                        >
+                          {trading ? "Cashing out…" : "Confirm Cash Out"}
+                        </button>
+                        <button
+                          className="review-button flex-1"
+                          style={{ background: "oklch(0.92 0 0)", color: "oklch(0.3 0 0)" }}
+                          onClick={() => setCashoutConfirming(false)}
+                          disabled={trading}
+                        >
+                          Cancel
+                        </button>
+                      </div>
+                    ) : (
+                      <button
+                        className="review-button mt-3"
+                        style={{ background: "#d97706" }}
+                        onClick={() => setCashoutConfirming(true)}
+                        disabled={trading}
+                      >
+                        <LogOut size={16} className="inline mr-1" />
+                        Cash out for {userPosition.total_invested.toLocaleString()} EAG
+                      </button>
+                    )}
+                  </>
+                )}
+              </div>
+            )}
 
             <div className="detail-sidebar-head" id="more-markets">
               <h2>More markets</h2>

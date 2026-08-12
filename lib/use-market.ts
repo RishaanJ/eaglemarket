@@ -14,6 +14,13 @@ export interface SyncedMarket extends MarketRow {
   category: Pick<CategoryRow, "name" | "slug" | "color" | "icon_key">;
 }
 
+export interface UserPosition {
+  yes_shares: number;
+  no_shares: number;
+  total_invested: number;
+  cashed_out_at: string | null;
+}
+
 export interface ChartDataPoint {
   day: string;
   yes: number;
@@ -32,6 +39,7 @@ export function useMarketData(focusMarketId?: number) {
   const supabase = useMemo(() => createClient(), []);
   const [markets, setMarkets] = useState<SyncedMarket[]>([]);
   const [userBalance, setUserBalance] = useState(0);
+  const [userPosition, setUserPosition] = useState<UserPosition | null>(null);
   // Tagged with its market so a pending fetch can never paint the previous market's chart.
   const [chart, setChart] = useState<{ marketId: number | null; points: ChartDataPoint[] }>({
     marketId: null,
@@ -142,6 +150,36 @@ export function useMarketData(focusMarketId?: number) {
     // Only the identity of the focused market should retrigger a history fetch.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [heroMarketId, markets.length, supabase]);
+
+  // Fetch position for focused market
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      if (!userId || !heroMarketId) {
+        if (!cancelled) setUserPosition(null);
+        return;
+      }
+      const { data } = await supabase
+        .from("positions")
+        .select("yes_shares, no_shares, total_invested, cashed_out_at")
+        .eq("user_id", userId)
+        .eq("market_id", heroMarketId)
+        .maybeSingle();
+
+      if (cancelled) return;
+      if (data) {
+        setUserPosition({
+          yes_shares: Number(data.yes_shares),
+          no_shares: Number(data.no_shares),
+          total_invested: Number(data.total_invested),
+          cashed_out_at: data.cashed_out_at,
+        });
+      } else {
+        setUserPosition(null);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [heroMarketId, supabase, userId]);
 
   useEffect(() => {
     if (!userId) return;
@@ -270,6 +308,49 @@ export function useMarketData(focusMarketId?: number) {
     [],
   );
 
+  const executeCashout = useCallback(
+    async (marketId: number) => {
+      setTrading(true);
+      setError(null);
+      const idempotencyKey = crypto.randomUUID();
+      try {
+        const response = await fetch("/api/cashout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            marketId,
+            idempotencyKey,
+          }),
+        });
+        const result = (await response.json()) as {
+          error?: string;
+          balance?: number;
+          proceeds?: number;
+        };
+
+        if (!response.ok) {
+          setError(result.error ?? "The cash-out could not be completed.");
+          return false;
+        }
+
+        setUserBalance(Number(result.balance));
+        setUserPosition({
+          yes_shares: 0,
+          no_shares: 0,
+          total_invested: 0,
+          cashed_out_at: new Date().toISOString(),
+        });
+        return true;
+      } catch {
+        setError("The network request failed. Please try again.");
+        return false;
+      } finally {
+        setTrading(false);
+      }
+    },
+    [],
+  );
+
   const heroMarket = markets.find((market) => market.id === heroMarketId) ?? null;
   const chartData = chart.marketId === heroMarketId ? chart.points : [];
   const marketMissing =
@@ -308,6 +389,7 @@ export function useMarketData(focusMarketId?: number) {
     probYes,
     probNo,
     userBalance,
+    userPosition,
     chartData,
     loading,
     trading,
@@ -315,6 +397,7 @@ export function useMarketData(focusMarketId?: number) {
     preview,
     previewSlippage,
     executeTrade,
+    executeCashout,
     refresh: load,
   };
 }
