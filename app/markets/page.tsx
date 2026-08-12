@@ -348,7 +348,11 @@ export default function Home() {
         <MotionReveal>
         <section className="hero-market" id="markets">
           <div className="hero-copy">
-            <h1>{heroMarket.question}</h1>
+            <h1>
+              <Link className="market-card-link" href={`/markets/${marketSlug(heroMarket)}`}>
+                {heroMarket.question}
+              </Link>
+            </h1>
             <p className="hero-description">
               {heroMarket.resolution_criteria}
             </p>
