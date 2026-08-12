@@ -33,7 +33,7 @@ begin
   -- Everything after the LAST '@'. Comparing a suffix instead would accept
   -- 'someone@notfusdk12.net', and splitting on the first '@' would accept
   -- 'a@evil.com@fusdk12.net'.
-  v_domain := pg_catalog.lower(pg_catalog.substring(new.email from '[^@]+$'));
+  v_domain := pg_catalog.lower(pg_catalog.substring(new.email, '[^@]+$'));
 
   if v_domain is distinct from c_domain then
     raise exception 'Accounts are limited to % school email addresses', '@' || c_domain
