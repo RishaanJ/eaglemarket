@@ -5,9 +5,12 @@ import { ArrowRight, Eye, EyeOff } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { DEFAULT_NEXT_PATH, safeNextPath } from "@/lib/security/next-path";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
+import { REFERRAL_QUERY_PARAM, safeReferralCode } from "@/lib/security/referral-code";
 import { createClient } from "@/lib/supabase/client";
+import { SCHOOL_EMAIL_DOMAIN, SCHOOL_EMAIL_ERROR, isSchoolEmail } from "@/lib/school-domain";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import {
   TurnstileWidget,
@@ -24,6 +27,33 @@ function BrandMark() {
       <i />
       <i />
     </span>
+  );
+}
+
+/**
+ * Where to land after login. proxy.ts sets ?next= when it bounces a signed out
+ * visitor off a protected route, which is what lets a shared link to a specific
+ * market survive the login round trip.
+ *
+ * Read at call time rather than held in state: it is only needed inside event
+ * handlers, and reading it during render would break server rendering. Always
+ * routed through safeNextPath — redirecting to a raw caller-supplied value
+ * would make this page an open redirect.
+ */
+function currentNextPath() {
+  if (typeof window === "undefined") return DEFAULT_NEXT_PATH;
+  return safeNextPath(new URLSearchParams(window.location.search).get("next"));
+}
+
+/**
+ * The referral code from the invite link, if the URL carries a well-formed one.
+ * Read at call time rather than held in state: it is only needed inside event
+ * handlers, and reading it during render would break server rendering.
+ */
+function currentReferralCode() {
+  if (typeof window === "undefined") return null;
+  return safeReferralCode(
+    new URLSearchParams(window.location.search).get(REFERRAL_QUERY_PARAM),
   );
 }
 
@@ -65,11 +95,24 @@ export default function AuthPage() {
     setMessage(null);
     const supabase = createClient();
     const callbackUrl = new URL("/auth/callback", window.location.origin);
-    callbackUrl.searchParams.set("next", "/markets");
+    callbackUrl.searchParams.set("next", currentNextPath());
     if (mode === "signup") callbackUrl.searchParams.set("legal", LEGAL_POLICY_VERSION);
+    // Google discards our own query string, but returns the callback URL we
+    // hand it intact — the same route `next` and `legal` already travel.
+    const oauthReferral = currentReferralCode();
+    if (mode === "signup" && oauthReferral) {
+      callbackUrl.searchParams.set(REFERRAL_QUERY_PARAM, oauthReferral);
+    }
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: callbackUrl.toString() },
+      options: {
+        redirectTo: callbackUrl.toString(),
+        // Sign-up only, for the same reason as the form check: hd filters the
+        // Google account chooser to the school domain, which would stop an
+        // existing user signing back in. A request to Google either way — the
+        // database trigger is what actually rejects an outside address.
+        ...(mode === "signup" ? { queryParams: { hd: SCHOOL_EMAIL_DOMAIN } } : {}),
+      },
     });
 
     if (error) {
@@ -118,6 +161,15 @@ export default function AuthPage() {
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("name") ?? "").trim();
+
+    // Sign-up only. An account that predates the domain rule must still be able
+    // to log in — blocking it here would lock out existing users, and the
+    // database already refuses to create anything new off-domain.
+    if (mode === "signup" && !isSchoolEmail(email)) {
+      setMessage({ type: "error", text: SCHOOL_EMAIL_ERROR });
+      setPending(false);
+      return;
+    }
     const supabase = createClient();
     const confirmationUrl = new URL("/auth/confirm", window.location.origin);
     const consentAcceptedAt = new Date().toISOString();
@@ -134,6 +186,10 @@ export default function AuthPage() {
           options: {
             data: {
               full_name: fullName,
+              // Read by the on_auth_user_created_referral trigger, which
+              // creates the pending referral row automatically — so a user who
+              // trades before ever "entering a code" is still matched.
+              ...(currentReferralCode() ? { referral_code: currentReferralCode() } : {}),
               terms_accepted_at: consentAcceptedAt,
               privacy_accepted_at: consentAcceptedAt,
               age_13_confirmed_at: consentAcceptedAt,
@@ -158,7 +214,7 @@ export default function AuthPage() {
       return;
     }
 
-    router.push("/markets");
+    router.push(currentNextPath());
     router.refresh();
   }
 
@@ -219,7 +275,7 @@ export default function AuthPage() {
 
               <label>
                 <span>School email</span>
-                <input name="email" type="email" autoComplete="email" placeholder="you@school.org" required />
+                <input name="email" type="email" autoComplete="email" placeholder="you@fusdk12.net" required />
               </label>
 
               <label>

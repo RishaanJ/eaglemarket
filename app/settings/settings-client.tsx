@@ -9,6 +9,7 @@ import { EagCoin } from "@/components/ui/eag-coin";
 import { createClient } from "@/lib/supabase/client";
 import { MotionReveal } from "@/components/ui/motion-reveal";
 import { NotificationPanel } from "@/components/notification-panel";
+import { ReferralCard } from "@/components/referral-card";
 import {
   getUsernameFormatError,
   normalizeUsername,
@@ -241,6 +242,8 @@ export default function SettingsClient({
             </CardFooter>
             </Card>
           </form>
+
+          <ReferralCard />
 
           <Card className="settings-card">
             <CardHeader className="border-b">

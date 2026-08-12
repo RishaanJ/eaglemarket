@@ -1,22 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { LEGAL_POLICY_VERSION } from "@/lib/legal";
+import { safeNextPath } from "@/lib/security/next-path";
+import { REFERRAL_QUERY_PARAM, safeReferralCode } from "@/lib/security/referral-code";
 import { createClient } from "@/lib/supabase/server";
+import { SCHOOL_EMAIL_DOMAIN } from "@/lib/school-domain";
 
-const AUTH_DESTINATIONS = new Set(["/markets", "/picks", "/rankings", "/settings", "/admin"]);
-
-function safeNextPath(value: string | null) {
-  if (!value || value.includes("\\") || /[\u0000-\u001f\u007f]/.test(value)) return "/markets";
-
-  try {
-    const base = new URL("https://eaglemarket.invalid");
-    const destination = new URL(value, base);
-    return destination.origin === base.origin && AUTH_DESTINATIONS.has(destination.pathname)
-      ? destination.pathname
-      : "/markets";
-  } catch {
-    return "/markets";
-  }
-}
 
 function redirectResponse(path: string) {
   return new NextResponse(null, {
@@ -45,6 +33,24 @@ export async function GET(request: NextRequest) {
     const { data, error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
+      // Google sign-in carries no user metadata at account creation, so the
+      // referral code is written here, after the exchange. The auth.users
+      // UPDATE trigger picks it up and creates the pending referral row.
+      const referralCode = safeReferralCode(
+        request.nextUrl.searchParams.get(REFERRAL_QUERY_PARAM),
+      );
+
+      if (data.user && referralCode) {
+        const { error: referralError } = await supabase.auth.updateUser({
+          data: { referral_code: referralCode },
+        });
+
+        // A referral is a bonus, never a reason to fail sign-in.
+        if (referralError) {
+          console.warn("Referral code not recorded", { code: referralError.code });
+        }
+      }
+
       const legalVersion = request.nextUrl.searchParams.get("legal");
 
       if (data.user && legalVersion === LEGAL_POLICY_VERSION) {
@@ -68,6 +74,19 @@ export async function GET(request: NextRequest) {
     }
 
     console.error("OAuth code exchange failed", { code: error.code });
+
+    // A Google account outside the school domain is refused by the database
+    // trigger, which surfaces here as a generic exchange failure. Say what
+    // actually happened instead of "please try again", which would send
+    // someone into a loop that cannot succeed.
+    if (/school email|fusdk12/i.test(error.message ?? "")) {
+      return redirectResponse(
+        `/auth?error=${encodeURIComponent(
+          `Use your @${SCHOOL_EMAIL_DOMAIN} school account. Other Google accounts can't be used to sign in.`,
+        )}`,
+      );
+    }
+
     return redirectResponse("/auth?error=We%20couldn%27t%20complete%20sign%20in.%20Please%20try%20again.");
   }
 
