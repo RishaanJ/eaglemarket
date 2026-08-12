@@ -107,10 +107,11 @@ export default function AuthPage() {
       provider: "google",
       options: {
         redirectTo: callbackUrl.toString(),
-        // Asks Google to show only school accounts in the picker. This is a
-        // request to Google, not enforcement — the database trigger is what
-        // actually rejects an outside address.
-        queryParams: { hd: SCHOOL_EMAIL_DOMAIN },
+        // Sign-up only, for the same reason as the form check: hd filters the
+        // Google account chooser to the school domain, which would stop an
+        // existing user signing back in. A request to Google either way — the
+        // database trigger is what actually rejects an outside address.
+        ...(mode === "signup" ? { queryParams: { hd: SCHOOL_EMAIL_DOMAIN } } : {}),
       },
     });
 
@@ -161,9 +162,10 @@ export default function AuthPage() {
     const password = String(form.get("password") ?? "");
     const fullName = String(form.get("name") ?? "").trim();
 
-    // Checked again in the database; this is only so the message is a sentence
-    // rather than a constraint violation.
-    if (!isSchoolEmail(email)) {
+    // Sign-up only. An account that predates the domain rule must still be able
+    // to log in — blocking it here would lock out existing users, and the
+    // database already refuses to create anything new off-domain.
+    if (mode === "signup" && !isSchoolEmail(email)) {
       setMessage({ type: "error", text: SCHOOL_EMAIL_ERROR });
       setPending(false);
       return;
